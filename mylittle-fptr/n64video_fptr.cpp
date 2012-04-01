@@ -1344,7 +1344,7 @@ int rdp_update()
 								stricterror("rdp_update: caching of antialiased pixels failed %d %d", line_x, far_line_x);
 							divot_filter(&nextr, &nextg, &nextb, &viaa_cache[next_line_x], &viaa_cache[line_x], &viaa_cache[far_line_x]);
 						}
-						else if (i < (hres - 1))
+						else
 						{
 							nextr = viaa_cache[next_line_x].r;
 							nextg = viaa_cache[next_line_x].g;
@@ -1354,14 +1354,9 @@ int rdp_update()
 						
 						if (scan_divot_bounds && divot)
 						{
-							if (next_line_x > cache_next_marker)
-							{
-								vi_fetch_filter_ptr(&viaa_cache_next[next_line_x], frame_buffer, next_scan_x, fsaa, dither_filter, next_line_x, j + 1, vres);
-								cache_next_marker = next_line_x;
-							}
 							divot_filter(&scanr, &scang, &scanb, &viaa_cache_next[line_x], &viaa_cache_next[prev_line_x], &viaa_cache_next[next_line_x]);
 						}
-						else if (j < (vres - 1))
+						else
 						{
 							scanr = viaa_cache_next[line_x].r;
 							scang = viaa_cache_next[line_x].g;
@@ -1378,7 +1373,7 @@ int rdp_update()
 							}
 							divot_filter(&scannextr, &scannextg, &scannextb, &viaa_cache_next[next_line_x], &viaa_cache_next[line_x], &viaa_cache_next[far_line_x]);
 						}
-						else if (j < (vres - 1) && i < (hres - 1))
+						else
 						{
 							scannextr = viaa_cache_next[next_line_x].r;
 							scannextg = viaa_cache_next[next_line_x].g;
