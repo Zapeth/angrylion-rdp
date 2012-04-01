@@ -82,7 +82,6 @@ UINT32 blend_en = 0;
 UINT32 prewrap = 0;
 UINT32 Malloced = 0;
 int blshifta = 0, blshiftb = 0;
-int dzpixenc = 0;
 UINT32 curpixel_memcvg = 0;
 UINT32 plim = 0x3fffff;
 UINT32 idxlim16 = 0x1fffff;
@@ -389,11 +388,12 @@ INLINE void fbread_4(UINT32 num);
 INLINE void fbread_8(UINT32 num);
 INLINE void fbread_16(UINT32 num);
 INLINE void fbread_32(UINT32 num);
+STRICTINLINE UINT32 dz_compress(UINT32 value);
 INLINE void z_build_com_table(void);
 INLINE void precalc_cvmask_derivatives(void);
 STRICTINLINE UINT16 decompress_cvmask_frombyte(UINT8 byte);
 STRICTINLINE void lookup_cvmask_derivatives(UINT32 mask, UINT8* offx, UINT8* offy);
-STRICTINLINE void z_store(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 z);
+STRICTINLINE void z_store(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 z, int dzpixenc);
 STRICTINLINE INT32 normalize_dzpix(INT32 sum);
 STRICTINLINE INT32 CLIP(INT32 value,INT32 min,INT32 max);
 INLINE UINT32 z_decompress(UINT32 zcurpixel);
@@ -465,12 +465,12 @@ struct {UINT32 shift; UINT32 add;} z_dec_table[8] = {
 
 struct {
 int (*finalize_spanalpha_ptr) ();
-UINT32 (*z_compare_ptr) (UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 sz, UINT16 dzpix);
+UINT32 (*z_compare_ptr) (UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 sz, UINT16 dzpix, int dzpixenc);
 } fups;
 
 
 extern int (*finalize_spanalpha_func[])();
-extern UINT32 (*z_compare_func[])(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 sz, UINT16 dzpix);
+extern UINT32 (*z_compare_func[])(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 sz, UINT16 dzpix, int dzpixenc);
 
 
 
@@ -4397,6 +4397,7 @@ void render_spans_1cycle(int start, int end, int tilenum, int flip)
 	int i, j;
 
 	int dzpix = other_modes.z_source_sel ? primitive_delta_z : spans_dzpix;
+	int dzpixenc = dz_compress(dzpix & 0xffff);
 	int drinc, dginc, dbinc, dainc, dzinc, dsinc, dtinc, dwinc;
 	if (flip)
 	{
@@ -4538,14 +4539,14 @@ void render_spans_1cycle(int start, int end, int tilenum, int flip)
 			zhbcur = zhb + curpixel;
 			
 			fbread_ptr(curpixel);
-			if (fups.z_compare_ptr(zbcur, zhbcur, sz, dzpix))
+			if (fups.z_compare_ptr(zbcur, zhbcur, sz, dzpix, dzpixenc))
 			{
 
 				if (blender_1cycle(&fir, &fig, &fib, cdith, partialreject, bsel0))
 				{
 					fbwrite_ptr(curpixel, fir, fig, fib);
 					if (other_modes.z_update_en)
-						z_store(zbcur, zhbcur, sz);
+						z_store(zbcur, zhbcur, sz, dzpixenc);
 				}
 			}
 
@@ -4596,6 +4597,7 @@ void render_spans_2cycle(int start, int end, int tilenum, int flip)
 	int i, j;
 
 	int dzpix = other_modes.z_source_sel ? primitive_delta_z : spans_dzpix;
+	int dzpixenc = dz_compress(dzpix & 0xffff);
 	int drinc, dginc, dbinc, dainc, dzinc, dsinc, dtinc, dwinc;
 	if (flip)
 	{
@@ -4728,14 +4730,14 @@ void render_spans_2cycle(int start, int end, int tilenum, int flip)
 			zhbcur = zhb + curpixel;
 			
 			fbread_ptr(curpixel);
-			if (fups.z_compare_ptr(zbcur, zhbcur, sz, dzpix))
+			if (fups.z_compare_ptr(zbcur, zhbcur, sz, dzpix, dzpixenc))
 			{
 				
 				if (blender_2cycle(&fir, &fig, &fib, cdith, partialreject, bsel0, bsel1))
 				{
 					fbwrite_ptr(curpixel, fir, fig, fib);
 					if (other_modes.z_update_en)
-						z_store(zbcur, zhbcur, sz);
+						z_store(zbcur, zhbcur, sz, dzpixenc);
 				}
 			}
 			
@@ -6945,6 +6947,7 @@ void rdp_process_list(void)
 	rdp_cmd_ptr = 0;
 	rdp_cmd_cur = 0;
 	dp_start = dp_current = dp_end;
+	dp_status |= DP_STATUS_CBUF_READY;
 }
 
 
@@ -7602,11 +7605,18 @@ STRICTINLINE void lookup_cvmask_derivatives(UINT32 mask, UINT8* offx, UINT8* off
 	*offy = cvarray[index].yoff;
 }
 
-STRICTINLINE void z_store(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 z)
+STRICTINLINE void z_store(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 z, int dzpixenc)
 {
 	UINT16 zval = z_com_table[z & 0x3ffff]|(dzpixenc >> 2);
 	RWRITEIDX16(zcurpixel, zval);
 	HWRITEADDR8(dzcurpixel, dzpixenc & 3);
+}
+
+STRICTINLINE UINT32 dz_compress(UINT32 value)
+{
+	int j = 0;
+	for (; value > 1; j++, value >>= 1);
+	return j;
 }
 
 STRICTINLINE INT32 normalize_dzpix(INT32 sum)
