@@ -1198,9 +1198,6 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_fb_coc_nocvu(UINT32 zcurpixel, UINT32 dzcu
 	blend_en = 1;
 	prewrap = overflow;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -1302,10 +1299,6 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_fb_coc_nocvu(UINT32 zcurpixel, UINT32 dz
 	int overflow = ((curpixel_memcvg + curpixel_cvg) & 8) > 0;
 	blend_en = 1;
 	prewrap = overflow;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-	
 
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -1419,9 +1412,6 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_fb_coc_nocvu(UINT32 zcurpixel, UINT32 dz
 	blend_en = 1;
 	prewrap = overflow;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -1524,9 +1514,6 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_fb_coc_nocvu(UINT32 zcurpixel, UINT32 
 	int overflow = curpixel_cvg > 0;
 	blend_en = 1;
 	prewrap = overflow;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -2147,10 +2134,6 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_ae_coc_nocvu(UINT32 zcurpixel, UINT32
 	blend_en = !overflow && farther;
 	prewrap = overflow;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-	
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -2253,9 +2236,6 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_ae_coc_nocvu(UINT32 zcurpixel, UINT
 	int overflow = ((curpixel_memcvg + curpixel_cvg) & 8) > 0;
 	blend_en = !overflow && farther;
 	prewrap = overflow;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 	
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -2369,9 +2349,6 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_ae_coc_nocvu(UINT32 zcurpixel, UINT
 	int overflow = curpixel_cvg > 0;
 	blend_en = !overflow && farther;
 	prewrap = overflow;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 	
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -2475,9 +2452,6 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_ae_coc_nocvu(UINT32 zcurpixel, UI
 	int overflow = curpixel_cvg > 0;
 	blend_en = !overflow && farther;
 	prewrap = overflow;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -3195,9 +3169,6 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_noae_coc_nocvu(UINT32 zcurpixel, UINT
 	blend_en = 0;
 	prewrap = overflow;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -3299,9 +3270,6 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_noae_coc_nocvu(UINT32 zcurpixel, UI
 	int overflow = ((curpixel_memcvg + curpixel_cvg) & 8) > 0;
 	blend_en = 0;
 	prewrap = overflow;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 	
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -3415,9 +3383,6 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_noae_coc_nocvu(UINT32 zcurpixel, UI
 	blend_en = 0;
 	prewrap = overflow;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -3519,9 +3484,6 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_noae_coc_nocvu(UINT32 zcurpixel, 
 	int overflow = curpixel_cvg > 0;
 	blend_en = 0;
 	prewrap = overflow;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -4123,9 +4085,6 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_fb_nococ_nocvu(UINT32 zcurpixel, UINT32 dz
 	int overflow = ((curpixel_memcvg + curpixel_cvg) & 8) > 0;
 	blend_en = 1;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -4225,9 +4184,6 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_fb_nococ_nocvu(UINT32 zcurpixel, UINT32 
 	
 	int overflow = ((curpixel_memcvg + curpixel_cvg) & 8) > 0;
 	blend_en = 1;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -4339,9 +4295,6 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_fb_nococ_nocvu(UINT32 zcurpixel, UINT32 
 	int overflow = curpixel_cvg > 0;
 	blend_en = 1;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -4441,9 +4394,6 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_fb_nococ_nocvu(UINT32 zcurpixel, UINT3
 	
 	int overflow = curpixel_cvg > 0;
 	blend_en = 1;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -5046,9 +4996,6 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_ae_nococ_nocvu(UINT32 zcurpixel, UINT
 	int overflow = ((curpixel_memcvg + curpixel_cvg) & 8) > 0;
 	blend_en = !overflow && farther;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -5149,9 +5096,6 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_ae_nococ_nocvu(UINT32 zcurpixel, UI
 	
 	int overflow = ((curpixel_memcvg + curpixel_cvg) & 8) > 0;
 	blend_en = !overflow && farther;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -5264,9 +5208,6 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_ae_nococ_nocvu(UINT32 zcurpixel, UI
 	int overflow = curpixel_cvg > 0;
 	blend_en = !overflow && farther;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -5367,9 +5308,6 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_ae_nococ_nocvu(UINT32 zcurpixel, 
 	
 	int overflow = curpixel_cvg > 0;
 	blend_en = !overflow && farther;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -6069,9 +6007,6 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_noae_nococ_nocvu(UINT32 zcurpixel, UI
 	int overflow = ((curpixel_memcvg + curpixel_cvg) & 8) > 0;
 	blend_en = 0;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -6171,9 +6106,6 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_noae_nococ_nocvu(UINT32 zcurpixel, 
 	
 	int overflow = ((curpixel_memcvg + curpixel_cvg) & 8) > 0;
 	blend_en = 0;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
@@ -6285,9 +6217,6 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_noae_nococ_nocvu(UINT32 zcurpixel, 
 	int overflow = curpixel_cvg > 0;
 	blend_en = 0;
 
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
-
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
 	UINT32 max = (oz == 0x3ffff);
@@ -6387,9 +6316,6 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_noae_nococ_nocvu(UINT32 zcurpixel
 	
 	int overflow = curpixel_cvg > 0;
 	blend_en = 0;
-
-	int cvgcoeff = 0;
-	UINT32 dzenc = 0;
 
 	INT32 diff = (INT32)sz - (INT32)dznew;
 	UINT32 nearer = (force_coplanar || diff <= (INT32)oz) ? 1: 0;
