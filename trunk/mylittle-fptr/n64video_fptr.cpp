@@ -6576,7 +6576,7 @@ static void rdp_set_other_modes(UINT32 w1, UINT32 w2)
 	other_modes.f.cvgneededafterzinterp = other_modes.antialias_en || (other_modes.cvg_dest < CVG_ZAP);
 
 	
-	fups.z_compare_ptr = z_compare_func[(other_modes.f.cvgneededafterzinterp << 9) | (other_modes.color_on_cvg << 8) | (other_modes.antialias_en << 7) | (other_modes.force_blend << 6) | (other_modes.z_update_en << 5) | (other_modes.f.blshiftersused << 4) | (other_modes.z_compare_en << 3) | (other_modes.z_mode << 1) | other_modes.image_read_en];
+	fups.z_compare_ptr = z_compare_func[(other_modes.f.cvgneededafterzinterp << 8) | (other_modes.color_on_cvg << 7) | (other_modes.antialias_en << 6) | (other_modes.force_blend << 5) | (other_modes.f.blshiftersused << 4) | (other_modes.z_compare_en << 3) | (other_modes.z_mode << 1) | other_modes.image_read_en];
 	fups.finalize_spanalpha_ptr = finalize_spanalpha_func[(other_modes.image_read_en << 4) | (other_modes.antialias_en << 3) | (other_modes.force_blend << 2) | other_modes.cvg_dest];
 }
 
