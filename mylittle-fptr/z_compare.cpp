@@ -155,7 +155,8 @@ UINT32 z_compare_zcomp_zmode3_ir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32
 UINT32 z_compare_zcomp_zmode3_noir_blsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 sz, UINT16 dzpix, int dzpixenc);
 UINT32 z_compare_zcomp_zmode3_noir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 sz, UINT16 dzpix, int dzpixenc);
 
-STRICTINLINE UINT32 dz_decompress(UINT32 zcurpixel, UINT32 dzcurpixel);
+STRICTINLINE UINT32 dz_decompress(UINT32 compresseddz);
+STRICTINLINE UINT32 z_decompress(UINT32 zb);
 
 
 UINT32 (*z_compare_func[0x200])(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 sz, UINT16 dzpix, int dzpixenc) = 
@@ -678,6 +679,7 @@ extern UINT32 idxlim16;
 extern UINT16* _rdram_16;
 extern OTHER_MODES other_modes;
 extern UINT8 hidden_bits[];
+extern UINT32 z_complete_dec_table[];
 
 
 extern UINT32 blend_en;
@@ -700,10 +702,10 @@ UINT32 z_compare_generic(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 sz, UINT16 
 
 	if (other_modes.z_compare_en)
 	{
-		oz = z_decompress(zcurpixel);
-		dzmem = dz_decompress(zcurpixel, dzcurpixel);
 		zval = RREADIDX16(zcurpixel);
+		oz = z_decompress(zval);		
 		rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+		dzmem = dz_decompress(rawdzmem);
 	}
 	else
 	{
@@ -795,10 +797,10 @@ UINT32 z_compare_zcomp_generic(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 sz, U
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -911,10 +913,10 @@ UINT32 z_compare_zcomp_zmode0_ir_blsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpixel
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -959,10 +961,12 @@ UINT32 z_compare_zcomp_zmode0_ir_noblsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpix
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -1006,10 +1010,10 @@ UINT32 z_compare_zcomp_zmode0_noir_blsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpix
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -1054,10 +1058,12 @@ UINT32 z_compare_zcomp_zmode0_noir_noblsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurp
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -1101,10 +1107,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpixel
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -1163,10 +1169,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_fb_coc_nocvu(UINT32 zcurpixel, UINT32 dzcu
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -1211,10 +1217,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpix
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -1268,10 +1276,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_fb_coc_nocvu(UINT32 zcurpixel, UINT32 dz
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -1315,10 +1325,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpix
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -1377,10 +1387,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_fb_coc_nocvu(UINT32 zcurpixel, UINT32 dz
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -1426,10 +1436,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurp
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -1483,10 +1495,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_fb_coc_nocvu(UINT32 zcurpixel, UINT32 
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -1529,8 +1543,8 @@ UINT32 z_compare_zcomp_zmode2_ir_blsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpixel
 	UINT32 oz, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
@@ -1550,9 +1564,10 @@ UINT32 z_compare_zcomp_zmode2_ir_noblsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpix
 {
 	sz &= 0x3ffff;
 
-	UINT32 oz;
+	UINT32 oz, zval;
 
-	oz = z_decompress(zcurpixel);
+	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);
 
 	UINT32 infront = (sz < oz) ? 1 : 0;
 	
@@ -1571,8 +1586,8 @@ UINT32 z_compare_zcomp_zmode2_noir_blsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpix
 	UINT32 oz, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
@@ -1592,9 +1607,10 @@ UINT32 z_compare_zcomp_zmode2_noir_noblsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurp
 {
 	sz &= 0x3ffff;
 
-	UINT32 oz;
+	UINT32 oz, zval;
 
-	oz = z_decompress(zcurpixel);
+	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);
 
 	UINT32 infront = (sz < oz) ? 1 : 0;
 	
@@ -1614,10 +1630,10 @@ UINT32 z_compare_zcomp_zmode3_ir_blsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpixel
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -1661,10 +1677,12 @@ UINT32 z_compare_zcomp_zmode3_ir_noblsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpix
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -1707,10 +1725,10 @@ UINT32 z_compare_zcomp_zmode3_noir_blsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurpix
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -1754,10 +1772,12 @@ UINT32 z_compare_zcomp_zmode3_noir_noblsh_fb_coc(UINT32 zcurpixel, UINT32 dzcurp
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -1842,10 +1862,10 @@ UINT32 z_compare_zcomp_zmode0_ir_blsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzcur
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -1891,10 +1911,12 @@ UINT32 z_compare_zcomp_zmode0_ir_noblsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzc
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -1939,10 +1961,10 @@ UINT32 z_compare_zcomp_zmode0_noir_blsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -1988,10 +2010,12 @@ UINT32 z_compare_zcomp_zmode0_noir_noblsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -2036,10 +2060,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzcur
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -2098,10 +2122,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_ae_coc_nocvu(UINT32 zcurpixel, UINT32
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -2147,10 +2171,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzc
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -2204,10 +2230,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_ae_coc_nocvu(UINT32 zcurpixel, UINT
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -2252,10 +2280,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -2314,10 +2342,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_ae_coc_nocvu(UINT32 zcurpixel, UINT
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -2363,10 +2391,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -2420,10 +2450,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_ae_coc_nocvu(UINT32 zcurpixel, UI
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -2468,10 +2500,10 @@ UINT32 z_compare_zcomp_zmode2_ir_blsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzcur
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -2515,10 +2547,12 @@ UINT32 z_compare_zcomp_zmode2_ir_noblsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzc
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -2561,10 +2595,10 @@ UINT32 z_compare_zcomp_zmode2_noir_blsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -2608,10 +2642,12 @@ UINT32 z_compare_zcomp_zmode2_noir_noblsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -2654,10 +2690,10 @@ UINT32 z_compare_zcomp_zmode3_ir_blsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzcur
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -2702,10 +2738,12 @@ UINT32 z_compare_zcomp_zmode3_ir_noblsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzc
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -2749,10 +2787,10 @@ UINT32 z_compare_zcomp_zmode3_noir_blsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -2797,10 +2835,12 @@ UINT32 z_compare_zcomp_zmode3_noir_noblsh_nofb_ae_coc(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -2882,10 +2922,10 @@ UINT32 z_compare_zcomp_zmode0_ir_blsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -2930,10 +2970,12 @@ UINT32 z_compare_zcomp_zmode0_ir_noblsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -2977,10 +3019,10 @@ UINT32 z_compare_zcomp_zmode0_noir_blsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -3025,10 +3067,12 @@ UINT32 z_compare_zcomp_zmode0_noir_noblsh_nofb_noae_coc(UINT32 zcurpixel, UINT32
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -3072,10 +3116,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -3134,10 +3178,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_noae_coc_nocvu(UINT32 zcurpixel, UINT
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -3182,10 +3226,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -3239,10 +3285,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_noae_coc_nocvu(UINT32 zcurpixel, UI
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -3286,10 +3334,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -3348,10 +3396,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_noae_coc_nocvu(UINT32 zcurpixel, UI
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -3396,10 +3444,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_noae_coc(UINT32 zcurpixel, UINT32
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -3453,10 +3503,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_noae_coc_nocvu(UINT32 zcurpixel, 
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -3499,8 +3551,8 @@ UINT32 z_compare_zcomp_zmode2_ir_blsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
@@ -3520,9 +3572,10 @@ UINT32 z_compare_zcomp_zmode2_ir_noblsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 d
 {
 	sz &= 0x3ffff;
 
-	UINT32 oz;
+	UINT32 oz, zval;
 
-	oz = z_decompress(zcurpixel);
+	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);
 
 	UINT32 infront = (sz < oz) ? 1 : 0;
 	
@@ -3541,8 +3594,8 @@ UINT32 z_compare_zcomp_zmode2_noir_blsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
@@ -3562,9 +3615,10 @@ UINT32 z_compare_zcomp_zmode2_noir_noblsh_nofb_noae_coc(UINT32 zcurpixel, UINT32
 {
 	sz &= 0x3ffff;
 
-	UINT32 oz;
+	UINT32 oz, zval;
 
-	oz = z_decompress(zcurpixel);
+	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);
 
 	UINT32 infront = (sz < oz) ? 1 : 0;
 	
@@ -3584,10 +3638,10 @@ UINT32 z_compare_zcomp_zmode3_ir_blsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -3631,10 +3685,12 @@ UINT32 z_compare_zcomp_zmode3_ir_noblsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -3677,10 +3733,10 @@ UINT32 z_compare_zcomp_zmode3_noir_blsh_nofb_noae_coc(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -3724,10 +3780,12 @@ UINT32 z_compare_zcomp_zmode3_noir_noblsh_nofb_noae_coc(UINT32 zcurpixel, UINT32
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -3804,10 +3862,10 @@ UINT32 z_compare_zcomp_zmode0_ir_blsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurpix
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -3851,10 +3909,12 @@ UINT32 z_compare_zcomp_zmode0_ir_noblsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurp
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -3897,10 +3957,10 @@ UINT32 z_compare_zcomp_zmode0_noir_blsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurp
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -3944,10 +4004,12 @@ UINT32 z_compare_zcomp_zmode0_noir_noblsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcu
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -3990,10 +4052,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurpix
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -4051,10 +4113,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_fb_nococ_nocvu(UINT32 zcurpixel, UINT32 dz
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -4098,10 +4160,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurp
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -4154,10 +4218,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_fb_nococ_nocvu(UINT32 zcurpixel, UINT32 
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -4200,10 +4266,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurp
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -4261,10 +4327,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_fb_nococ_nocvu(UINT32 zcurpixel, UINT32 
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -4308,10 +4374,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcu
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -4364,10 +4432,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_fb_nococ_nocvu(UINT32 zcurpixel, UINT3
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -4409,8 +4479,8 @@ UINT32 z_compare_zcomp_zmode2_ir_blsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurpix
 	UINT32 oz, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
@@ -4429,9 +4499,10 @@ UINT32 z_compare_zcomp_zmode2_ir_noblsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurp
 {
 	sz &= 0x3ffff;
 
-	UINT32 oz;
+	UINT32 oz, zval;
 
-	oz = z_decompress(zcurpixel);
+	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);
 
 	UINT32 infront = (sz < oz) ? 1 : 0;
 	
@@ -4449,8 +4520,8 @@ UINT32 z_compare_zcomp_zmode2_noir_blsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurp
 	UINT32 oz, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
@@ -4469,9 +4540,10 @@ UINT32 z_compare_zcomp_zmode2_noir_noblsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcu
 {
 	sz &= 0x3ffff;
 
-	UINT32 oz;
+	UINT32 oz, zval;
 
-	oz = z_decompress(zcurpixel);
+	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);
 
 	UINT32 infront = (sz < oz) ? 1 : 0;
 	
@@ -4490,10 +4562,10 @@ UINT32 z_compare_zcomp_zmode3_ir_blsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurpix
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -4536,10 +4608,12 @@ UINT32 z_compare_zcomp_zmode3_ir_noblsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurp
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -4581,10 +4655,10 @@ UINT32 z_compare_zcomp_zmode3_noir_blsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcurp
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -4627,10 +4701,12 @@ UINT32 z_compare_zcomp_zmode3_noir_noblsh_fb_nococ(UINT32 zcurpixel, UINT32 dzcu
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -4710,10 +4786,10 @@ UINT32 z_compare_zcomp_zmode0_ir_blsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -4758,10 +4834,12 @@ UINT32 z_compare_zcomp_zmode0_ir_noblsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -4805,10 +4883,10 @@ UINT32 z_compare_zcomp_zmode0_noir_blsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -4853,10 +4931,12 @@ UINT32 z_compare_zcomp_zmode0_noir_noblsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -4900,10 +4980,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -4961,10 +5041,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_ae_nococ_nocvu(UINT32 zcurpixel, UINT
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -5009,10 +5089,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -5065,10 +5147,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_ae_nococ_nocvu(UINT32 zcurpixel, UI
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -5112,10 +5196,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -5173,10 +5257,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_ae_nococ_nocvu(UINT32 zcurpixel, UI
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -5221,10 +5305,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -5277,10 +5363,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_ae_nococ_nocvu(UINT32 zcurpixel, 
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -5324,10 +5412,10 @@ UINT32 z_compare_zcomp_zmode2_ir_blsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -5370,10 +5458,12 @@ UINT32 z_compare_zcomp_zmode2_ir_noblsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -5415,10 +5505,10 @@ UINT32 z_compare_zcomp_zmode2_noir_blsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -5461,10 +5551,12 @@ UINT32 z_compare_zcomp_zmode2_noir_noblsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -5506,10 +5598,10 @@ UINT32 z_compare_zcomp_zmode3_ir_blsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 dzc
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -5553,10 +5645,12 @@ UINT32 z_compare_zcomp_zmode3_ir_noblsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 d
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -5599,10 +5693,10 @@ UINT32 z_compare_zcomp_zmode3_noir_blsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -5646,10 +5740,12 @@ UINT32 z_compare_zcomp_zmode3_noir_noblsh_nofb_ae_nococ(UINT32 zcurpixel, UINT32
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -5726,10 +5822,10 @@ UINT32 z_compare_zcomp_zmode0_ir_blsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -5773,10 +5869,12 @@ UINT32 z_compare_zcomp_zmode0_ir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -5819,10 +5917,10 @@ UINT32 z_compare_zcomp_zmode0_noir_blsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -5866,10 +5964,12 @@ UINT32 z_compare_zcomp_zmode0_noir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -5912,10 +6012,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -5973,10 +6073,10 @@ UINT32 z_compare_zcomp_zmode1_ir_blsh_nofb_noae_nococ_nocvu(UINT32 zcurpixel, UI
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -6020,10 +6120,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -6076,10 +6178,12 @@ UINT32 z_compare_zcomp_zmode1_ir_noblsh_nofb_noae_nococ_nocvu(UINT32 zcurpixel, 
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -6122,10 +6226,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -6183,10 +6287,10 @@ UINT32 z_compare_zcomp_zmode1_noir_blsh_nofb_noae_nococ_nocvu(UINT32 zcurpixel, 
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -6230,10 +6334,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -6286,10 +6392,12 @@ UINT32 z_compare_zcomp_zmode1_noir_noblsh_nofb_noae_nococ_nocvu(UINT32 zcurpixel
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -6331,8 +6439,8 @@ UINT32 z_compare_zcomp_zmode2_ir_blsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
@@ -6351,9 +6459,10 @@ UINT32 z_compare_zcomp_zmode2_ir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32
 {
 	sz &= 0x3ffff;
 
-	UINT32 oz;
+	UINT32 oz, zval;
 
-	oz = z_decompress(zcurpixel);
+	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);	
 
 	UINT32 infront = (sz < oz) ? 1 : 0;
 	
@@ -6371,8 +6480,8 @@ UINT32 z_compare_zcomp_zmode2_noir_blsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32
 	UINT32 oz, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
@@ -6391,9 +6500,10 @@ UINT32 z_compare_zcomp_zmode2_noir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT
 {
 	sz &= 0x3ffff;
 
-	UINT32 oz;
+	UINT32 oz, zval;
 
-	oz = z_decompress(zcurpixel);
+	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);
 
 	UINT32 infront = (sz < oz) ? 1 : 0;
 	
@@ -6412,10 +6522,10 @@ UINT32 z_compare_zcomp_zmode3_ir_blsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32 d
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -6458,10 +6568,12 @@ UINT32 z_compare_zcomp_zmode3_ir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -6503,10 +6615,10 @@ UINT32 z_compare_zcomp_zmode3_noir_blsh_nofb_noae_nococ(UINT32 zcurpixel, UINT32
 	UINT32 oz, dzmem, zval;
 	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
 	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	blshifta = CLIP(dzpixenc - rawdzmem, 0, 4);
 	blshiftb = CLIP(rawdzmem - dzpixenc, 0, 4);
@@ -6549,10 +6661,12 @@ UINT32 z_compare_zcomp_zmode3_noir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT
 	sz &= 0x3ffff;
 
 	UINT32 oz, dzmem, zval;
+	INT32 rawdzmem;
 
-	oz = z_decompress(zcurpixel);
-	dzmem = dz_decompress(zcurpixel, dzcurpixel);
 	zval = RREADIDX16(zcurpixel);
+	oz = z_decompress(zval);		
+	rawdzmem = ((zval & 3) << 2) | (HREADADDR8(dzcurpixel) & 3);
+	dzmem = dz_decompress(rawdzmem);
 
 	int precision_factor = (zval >> 13) & 0xf;
 
@@ -6586,10 +6700,12 @@ UINT32 z_compare_zcomp_zmode3_noir_noblsh_nofb_noae_nococ(UINT32 zcurpixel, UINT
 	return (farther && nearer && !max); 
 }
 
-STRICTINLINE UINT32 dz_decompress(UINT32 zcurpixel, UINT32 dzcurpixel)
+STRICTINLINE UINT32 dz_decompress(UINT32 dz_compressed)
 {
-	UINT16 zval = RREADIDX16(zcurpixel);
-	UINT8 dzval = HREADADDR8(dzcurpixel);
-	UINT32 dz_compressed = ((zval & 3) << 2) | (dzval & 3);
 	return (1 << dz_compressed);
+}
+
+STRICTINLINE UINT32 z_decompress(UINT32 zb)
+{
+	return z_complete_dec_table[(zb >> 2) & 0x3fff];
 }
