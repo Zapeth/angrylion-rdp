@@ -396,7 +396,6 @@ STRICTINLINE void lookup_cvmask_derivatives(UINT32 mask, UINT8* offx, UINT8* off
 STRICTINLINE void z_store(UINT32 zcurpixel, UINT32 dzcurpixel, UINT32 z, int dzpixenc);
 STRICTINLINE INT32 normalize_dzpix(INT32 sum);
 STRICTINLINE INT32 CLIP(INT32 value,INT32 min,INT32 max);
-INLINE UINT32 z_decompress(UINT32 zcurpixel);
 STRICTINLINE void video_filter16(int* r, int* g, int* b, UINT32 fboffset, UINT32 num, UINT32 hres, UINT32 centercvg);
 STRICTINLINE void video_filter32(int* endr, int* endg, int* endb, UINT32 fboffset, UINT32 num, UINT32 hres, UINT32 centercvg);
 STRICTINLINE void divot_filter(int* r, int* g, int* b, CCVG* centercolor, CCVG* leftcolor, CCVG* rightcolor);
@@ -7382,12 +7381,6 @@ STRICTINLINE void fbread_32(UINT32 curpixel)
 		curpixel_memcvg = 7;
 		memory_color.a = 0xe0;
 	}
-}
-
-INLINE UINT32 z_decompress(UINT32 zcurpixel)
-{
-	UINT32 zb = RREADIDX16(zcurpixel);
-	return z_complete_dec_table[(zb >> 2) & 0x3fff];
 }
 
 INLINE void z_build_com_table(void)
