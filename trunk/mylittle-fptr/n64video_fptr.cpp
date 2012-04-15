@@ -533,7 +533,7 @@ CVtcmaskDERIVATIVE cvarray[0x100];
 
 struct onetime
 {
-	int ntscnolerp, copymstrangecrashes, fillmcrashes, fillmbitcrashes;
+	int ntscnolerp, copymstrangecrashes, fillmcrashes, fillmbitcrashes, dpcurunaligned;
 } onetimewarnings;
 
 extern INT32 pitchindwords;
@@ -6902,6 +6902,18 @@ void rdp_process_list(void)
 	
 
 	
+
+	if (dp_current & 7)
+	{
+		rdp_pipeline_crashed = 1;
+		if (!onetimewarnings.dpcurunaligned)
+			stricterror("dp_current is not 64bit-aligned. The RDP has crashed.");
+		onetimewarnings.dpcurunaligned = 1;
+		dp_status |= (DP_STATUS_DMA_BUSY | DP_STATUS_CMD_BUSY);
+		
+		
+		return;
+	}
 
 	
 	for (i = 0; i < length; i += 4)
