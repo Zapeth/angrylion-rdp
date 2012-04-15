@@ -889,6 +889,8 @@ int rdp_init()
 	
 	
 
+	memset(tile, 0, sizeof(tile));
+
 	rdp_pipeline_crashed = 0;
 	memset(&onetimewarnings, 0, sizeof(onetimewarnings));
 
