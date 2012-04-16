@@ -8781,8 +8781,10 @@ STRICTINLINE void tclod_1cycle_current(INT32* sss, INT32* sst, INT32 nexts, INT3
 
 	if (dolod)
 	{
+		int nextscan = scanline + 1;
+
 		
-		if (!sigs->endspan || !sigs->longspan)
+		if (!sigs->endspan || !sigs->longspan || !span[nextscan].validline)
 		{
 			if ((sigs->preendspan && sigs->longspan) || (sigs->endspan && sigs->midspan))
 			{
@@ -8799,9 +8801,9 @@ STRICTINLINE void tclod_1cycle_current(INT32* sss, INT32* sst, INT32 nexts, INT3
 		}
 		else
 		{
-			fart = (span[scanline + 1].t + dtinc) >> 16; 
-			fars = (span[scanline + 1].s + dsinc) >> 16; 
-			farsw = (span[scanline + 1].w + dwinc) >> 16;
+			fart = (span[nextscan].t + dtinc) >> 16; 
+			fars = (span[nextscan].s + dsinc) >> 16; 
+			farsw = (span[nextscan].w + dwinc) >> 16;
 		}
 
 		if (other_modes.persp_tex_en)
@@ -8902,9 +8904,10 @@ STRICTINLINE void tclod_1cycle_next(INT32* sss, INT32* sst, INT32 s, INT32 t, IN
 
 	if (dolod)
 	{
+		int nextscan = scanline + 1;
 		if (!sigs->nextspan)
 		{
-			if (!sigs->endspan || !sigs->longspan)
+			if (!sigs->endspan || !sigs->longspan || !span[nextscan].validline)
 			{
 				nextsw = (w + dwinc) >> 16;
 				nexts = (s + dsinc) >> 16;
@@ -8924,9 +8927,9 @@ STRICTINLINE void tclod_1cycle_next(INT32* sss, INT32* sst, INT32 s, INT32 t, IN
 			}
 			else
 			{
-				nextt = span[scanline + 1].t;
-				nexts = span[scanline + 1].s;
-				nextsw = span[scanline + 1].w;
+				nextt = span[nextscan].t;
+				nexts = span[nextscan].s;
+				nextsw = span[nextscan].w;
 				fart = (nextt + dtinc) >> 16; 
 				fars = (nexts + dsinc) >> 16; 
 				farsw = (nextsw + dwinc) >> 16;
@@ -8937,11 +8940,12 @@ STRICTINLINE void tclod_1cycle_next(INT32* sss, INT32* sst, INT32 s, INT32 t, IN
 		}
 		else
 		{
-			if (sigs->longspan || sigs->midspan)
+			if ((sigs->longspan || sigs->midspan) && span[nextscan].validline)
+			
 			{
-				nextt = span[scanline + 1].t + dtinc;
-				nexts = span[scanline + 1].s + dsinc;
-				nextsw = span[scanline + 1].w + dwinc;
+				nextt = span[nextscan].t + dtinc;
+				nexts = span[nextscan].s + dsinc;
+				nextsw = span[nextscan].w + dwinc;
 				fart = (nextt + dtinc) >> 16; 
 				fars = (nexts + dsinc) >> 16; 
 				farsw = (nextsw + dwinc) >> 16;
@@ -9134,9 +9138,10 @@ STRICTINLINE void get_texel1_1cycle(INT32* s1, INT32* t1, INT32 s, INT32 t, INT3
 {
 	INT32 nexts, nextt, nextsw;
 	
-	
-	if (!sigs->endspan || !sigs->longspan)
+	if (!sigs->endspan || !sigs->longspan || !span[scanline + 1].validline)
 	{
+	
+	
 		nextsw = (w + dwinc) >> 16;
 		nexts = (s + dsinc) >> 16;
 		nextt = (t + dtinc) >> 16;
