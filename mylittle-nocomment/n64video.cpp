@@ -68,8 +68,10 @@ UINT32 ptr_onstart = 0;
 
 extern FILE* zeldainfo;
 
-UINT32 internal_vi_v_current_line = 0;
-UINT32 old_vi_origin = 0;
+UINT32 prevvicurrent = 0;
+int emucontrolsvicurrent = -1;
+int prevserrate = 0;
+int oldlowerfield = 0;
 INT32 oldvstart = 1337;
 UINT32 oldhstart = 0;
 UINT32 oldsomething = 0;
@@ -484,7 +486,7 @@ INLINE void tcdiv_persp(INT32 ss, INT32 st, INT32 sw, INT32* sss, INT32* sst);
 INLINE void tcdiv_nopersp(INT32 ss, INT32 st, INT32 sw, INT32* sss, INT32* sst);
 STRICTINLINE void tclod_4x17_to_15(INT32 scurr, INT32 snext, INT32 tcurr, INT32 tnext, INT32 previous, INT32* lod);
 STRICTINLINE void tclod_tcclamp(INT32* sss, INT32* sst);
-STRICTINLINE void lodfrac_lodtile_signals(int lodclamp, INT32 lod, UINT32* l_tile, UINT32* magnify, UINT32* distant);
+STRICTINLINE void lodfrac_lodtile_signals(int lodclamp, INT32 lod, UINT32* l_tile, UINT32* magnify, UINT32* distant, INT32* lfdst);
 STRICTINLINE void tclod_1cycle_current(INT32* sss, INT32* sst, INT32 nexts, INT32 nextt, INT32 s, INT32 t, INT32 w, INT32 dsinc, INT32 dtinc, INT32 dwinc, INT32 scanline, INT32 prim_tile, INT32* t1, SPANSIGS* sigs);
 STRICTINLINE void tclod_1cycle_current_simple(INT32* sss, INT32* sst, INT32 s, INT32 t, INT32 w, INT32 dsinc, INT32 dtinc, INT32 dwinc, INT32 scanline, INT32 prim_tile, INT32* t1, SPANSIGS* sigs);
 STRICTINLINE void tclod_1cycle_next(INT32* sss, INT32* sst, INT32 s, INT32 t, INT32 w, INT32 dsinc, INT32 dtinc, INT32 dwinc, INT32 scanline, INT32 prim_tile, INT32* t1, SPANSIGS* sigs, INT32* prelodfrac);
@@ -610,7 +612,7 @@ typedef struct{
 	UINT8 cvbit;
 	UINT8 xoff;
 	UINT8 yoff;
-}CVtcmaskDERIVATIVE;
+} CVtcmaskDERIVATIVE;
 
 UINT32 gamma_table[0x100];
 UINT32 gamma_dither_table[0x4000];
@@ -1181,7 +1183,11 @@ int rdp_update()
 	
 	
 	
+	
+	
 
+	
+	
 	
 	
 	
@@ -1198,11 +1204,34 @@ int rdp_update()
 	
 	
 	int validinterlace = (vitype & 2) && serration_pulses;
-	if (!validinterlace)
-		internal_vi_v_current_line = 0;
-	int lowerfield = validinterlace && !(internal_vi_v_current_line & 1);
+	if (validinterlace && prevserrate && emucontrolsvicurrent < 0)
+		emucontrolsvicurrent = (vi_v_current_line & 1) != prevvicurrent ? 1 : 0;
+
+	int lowerfield = 0;
 	if (validinterlace)
-		internal_vi_v_current_line ^= 1;
+	{
+		if (emucontrolsvicurrent == 1)
+			lowerfield = (vi_v_current_line & 1) ^ 1;
+		else if (!emucontrolsvicurrent)
+		{
+			if (v_start == oldvstart)
+				lowerfield = oldlowerfield ^ 1;
+			else
+				lowerfield = v_start < oldvstart ? 1 : 0;
+		}
+	}
+
+	oldlowerfield = lowerfield;
+	
+	
+	if (validinterlace)
+	{
+		prevserrate = 1;
+		prevvicurrent = vi_v_current_line & 1;
+		oldvstart = v_start;
+	}
+	else
+		prevserrate = 0;
 
 	
 	
@@ -1219,9 +1248,8 @@ int rdp_update()
 	int lineshifter = serration_pulses ? 0 : 1;
 	int twolines = serration_pulses ? 1 : 0;
 
-	oldvstart = v_start;
-
-	v_start = (v_start - (ispal ? 47 : 37)) >> 1;
+	v_start = (v_start - (ispal ? 45 : 35)) >> 1;
+	
 	
 	
 	
@@ -1248,7 +1276,7 @@ int rdp_update()
 	INT32 h_end = hres + h_start;
 	INT32 hrightblank = PRESCALE_WIDTH - h_end;
 
-	int vactivelines = (vi_v_sync & 0x3ff) - (ispal ? 47 : 37);
+	int vactivelines = (vi_v_sync & 0x3ff) - (ispal ? 45 : 35);
 	if (vactivelines > PRESCALE_HEIGHT)
 		fatalerror("VI_V_SYNC_REG too big");
 	if (vactivelines < 0)
@@ -1945,6 +1973,21 @@ STRICTINLINE void combiner_1cycle(int adseed, UINT32* curpixel_cvg)
 	
 	if (combiner_rgbmul_r[1] != &zero_color)
 	{
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		
 		combined_color.r = color_combiner_equation(*combiner_rgbsub_a_r[1],*combiner_rgbsub_b_r[1],*combiner_rgbmul_r[1],*combiner_rgbadd_r[1]);
 		combined_color.g = color_combiner_equation(*combiner_rgbsub_a_g[1],*combiner_rgbsub_b_g[1],*combiner_rgbmul_g[1],*combiner_rgbadd_g[1]);
@@ -2742,7 +2785,7 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 
 			save = u = TMEM[taddr & 0x7ff];
 
-			u = (u - 0x80) & 0x1ff;
+			u = u - 0x80;
 
 			color->r = u;
 			color->g = u;
@@ -2769,8 +2812,8 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 			u = c >> 8;
 			v = c & 0xff;
 
-			u = (u - 0x80) & 0x1ff;
-			v = (v - 0x80) & 0x1ff;
+			u = u - 0x80;
+			v = v - 0x80;
 			
 			
 
@@ -3282,13 +3325,13 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 			INT32 u0, u1, u2, u3, save0, save1, save2, save3;
 
 			save0 = u0 = TMEM[taddr0 & 0x7ff];
-			u0 = (u0 - 0x80) & 0x1ff;
+			u0 = u0 - 0x80;
 			save1 = u1 = TMEM[taddr1 & 0x7ff];
-			u1 = (u1 - 0x80) & 0x1ff;
+			u1 = u1 - 0x80;
 			save2 = u2 = TMEM[taddr2 & 0x7ff];
-			u2 = (u2 - 0x80) & 0x1ff;
+			u2 = u2 - 0x80;
 			save3 = u3 = TMEM[taddr3 & 0x7ff];
-			u3 = (u3 - 0x80) & 0x1ff;
+			u3 = u3 - 0x80;
 
 			color0->r = u0;
 			color0->g = u0;
@@ -3363,14 +3406,14 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 			u3 = c3 >> 8;
 			v3 = c3 & 0xff;
 
-			u0 = (u0 - 0x80) & 0x1ff;
-			v0 = (v0 - 0x80) & 0x1ff;
-			u1 = (u1 - 0x80) & 0x1ff;
-			v1 = (v1 - 0x80) & 0x1ff;
-			u2 = (u2 - 0x80) & 0x1ff;
-			v2 = (v2 - 0x80) & 0x1ff;
-			u3 = (u3 - 0x80) & 0x1ff;
-			v3 = (v3 - 0x80) & 0x1ff;
+			u0 = u0 - 0x80;
+			v0 = v0 - 0x80;
+			u1 = u1 - 0x80;
+			v1 = v1 - 0x80;
+			u2 = u2 - 0x80;
+			v2 = v2 - 0x80;
+			u3 = u3 - 0x80;
+			v3 = v3 - 0x80;
 
 			color0->r = u0;
 			color0->g = v0;
@@ -4574,17 +4617,10 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 				fetch_texel_entlut_quadro(&t0, &t1, &t2, &t3, sss1, sss2, sst1, sst2, tilenum);
 
 			
-			if (tile[tilenum].format == FORMAT_YUV)
-			{
-				t0.r = SIGN(t0.r, 9); 
-				t0.g = SIGN(t0.g, 9); 
-				t1.r = SIGN(t1.r, 9); 
-				t1.g = SIGN(t1.g, 9);
-				t2.r = SIGN(t2.r, 9); 
-				t2.g = SIGN(t2.g, 9);
-				t3.r = SIGN(t3.r, 9); 
-				t3.g = SIGN(t3.g, 9);
-			}
+
+			
+			
+			
 
 			if (!other_modes.mid_texel || sfrac != 0x10 || tfrac != 0x10)
 			{
@@ -4658,12 +4694,6 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 			if (convert)
 				t0 = *prev;
 
-			if (tile[tilenum].format == FORMAT_YUV)
-			{
-				t0.r = SIGN(t0.r, 9);
-				t0.g = SIGN(t0.g, 9);
-			}
-
 			
 			TEX->r = t0.b + ((k0_tf * t0.g + 0x80) >> 8);
 			TEX->g = t0.b + ((k1_tf * t0.r + k2_tf * t0.g + 0x80) >> 8);
@@ -4705,12 +4735,6 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 		{
 			if (convert)
 				t0 = *prev;
-
-			if (tile[tilenum].format == FORMAT_YUV)
-			{
-				t0.r = SIGN(t0.r, 9); 
-				t0.g = SIGN(t0.g, 9);
-			}
 
 			TEX->r = t0.b + ((k0_tf * t0.g + 0x80) >> 8);
 			TEX->g = t0.b + ((k1_tf * t0.r + k2_tf * t0.g + 0x80) >> 8);
@@ -7517,7 +7541,15 @@ static void rdp_tri_tex_z(UINT32 w1, UINT32 w2)
 	memset(&ewdata[8], 0, 16 * sizeof(INT32));
 	memcpy(&ewdata[24], &rdp_cmd_data[rdp_cmd_cur + 8], 16 * sizeof(INT32));
 	memcpy(&ewdata[40], &rdp_cmd_data[rdp_cmd_cur + 24], 4 * sizeof(INT32));
+
+	
+	
+	
+	
+	
 	edgewalker_for_prims(ewdata);
+
+	
 }
 
 static void rdp_tri_shade(UINT32 w1, UINT32 w2)
@@ -7550,7 +7582,12 @@ static void rdp_tri_texshade_z(UINT32 w1, UINT32 w2)
 	INT32 ewdata[44];
 	memcpy(&ewdata[0], &rdp_cmd_data[rdp_cmd_cur], 44 * sizeof(INT32));
 
+	
+	
+
 	edgewalker_for_prims(ewdata);
+
+	
 }
 
 static void rdp_tex_rect(UINT32 w1, UINT32 w2)
@@ -9284,10 +9321,14 @@ STRICTINLINE int finalize_spanalpha(UINT32 blend_en, UINT32 curpixel_cvg, UINT32
 		{
 			finalcvg = curpixel_cvg + curpixel_memcvg;
 		}
+
+		
+		
 		if (!(finalcvg & 8))
 			finalcvg &= 7;
 		else
 			finalcvg = 7;
+
 		break;
 	case CVG_WRAP:
 		finalcvg = (curpixel_cvg + curpixel_memcvg) & 7;
@@ -9315,8 +9356,8 @@ STRICTINLINE INT32 normalize_dzpix(INT32 sum)
 
 	for(int count = 0x2000; count > 0; count >>= 1)
     {
-      if (sum & count)
-        return(count << 1);
+		if (sum & count)
+			return(count << 1);
     }
 	fatalerror("normalize_dzpix: invalid codepath taken");
 	return 0;
@@ -10228,7 +10269,7 @@ INLINE void clearscreen(UINT32 x0, UINT32 y0, UINT32 x1, UINT32 y1, UINT32 white
 	memset(&ddbltfx, 0, sizeof(DDBLTFX));
 	ddbltfx.dwSize = sizeof(DDBLTFX);
 	ddbltfx.dwFillColor = 0;
-	res = IDirectDrawSurface_Blt(lpddsback, 0, lpddsprimary, 0, DDBLT_WAIT | DDBLT_COLORFILL, &ddbltfx);
+	res = IDirectDrawSurface_Blt(lpddsprimary, &bltrect, 0, 0, DDBLT_WAIT | DDBLT_COLORFILL, &ddbltfx);
 	if (res != DD_OK)
 		fatalerror("clearscreen: Blt failed.");
 }
@@ -10375,7 +10416,7 @@ STRICTINLINE void tclod_2cycle_current(INT32* sss, INT32* sst, INT32 nexts, INT3
 		tclod_4x17_to_15(inits, nexts, initt, nextt, 0, &lod);
 		tclod_4x17_to_15(inits, nextys, initt, nextyt, lod, &lod);
 
-		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant);
+		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant, &lod_frac);
 
 		
 		if (other_modes.tex_lod_en)
@@ -10436,7 +10477,7 @@ STRICTINLINE void tclod_2cycle_current_simple(INT32* sss, INT32* sst, INT32 s, I
 		tclod_4x17_to_15(inits, nexts, initt, nextt, 0, &lod);
 		tclod_4x17_to_15(inits, nextys, initt, nextyt, lod, &lod);
 
-		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant);
+		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant, &lod_frac);
 	
 		if (other_modes.tex_lod_en)
 		{
@@ -10496,7 +10537,7 @@ STRICTINLINE void tclod_2cycle_current_notexel1(INT32* sss, INT32* sst, INT32 s,
 		tclod_4x17_to_15(inits, nexts, initt, nextt, 0, &lod);
 		tclod_4x17_to_15(inits, nextys, initt, nextyt, lod, &lod);
 
-		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant);
+		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant, &lod_frac);
 	
 		if (other_modes.tex_lod_en)
 		{
@@ -10540,32 +10581,7 @@ STRICTINLINE void tclod_2cycle_next(INT32* sss, INT32* sst, INT32 s, INT32 t, IN
 		tclod_4x17_to_15(inits, nexts, initt, nextt, 0, &lod);
 		tclod_4x17_to_15(inits, nextys, initt, nextyt, lod, &lod);
 
-		
-		if ((lod & 0x4000) || lodclamp)
-			lod = 0x7fff;
-		else if (lod < min_level)
-			lod = min_level;
-						
-		magnify = (lod < 32) ? 1: 0;
-		l_tile =  log2table[(lod >> 5) & 0xff];
-		distant = ((lod & 0x6000) || (l_tile >= max_level)) ? 1 : 0;
-
-		*prelodfrac = ((lod << 3) >> l_tile) & 0xff;
-
-		
-		if(!other_modes.sharpen_tex_en && !other_modes.detail_tex_en)
-		{
-			if (distant)
-				*prelodfrac = 0xff;
-			else if (magnify)
-				*prelodfrac = 0;
-		}
-
-		
-		
-
-		if(other_modes.sharpen_tex_en && magnify)
-			*prelodfrac |= 0x100;
+		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant, prelodfrac);
 
 		if (other_modes.tex_lod_en)
 		{
@@ -10658,7 +10674,7 @@ STRICTINLINE void tclod_1cycle_current(INT32* sss, INT32* sst, INT32 nexts, INT3
 		
 		tclod_4x17_to_15(nexts, fars, nextt, fart, 0, &lod);
 
-		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant);
+		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant, &lod_frac);
 	
 		if (other_modes.tex_lod_en)
 		{
@@ -10738,7 +10754,7 @@ STRICTINLINE void tclod_1cycle_current_simple(INT32* sss, INT32* sst, INT32 s, I
 
 		tclod_4x17_to_15(nexts, fars, nextt, fart, 0, &lod);
 
-		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant);
+		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant, &lod_frac);
 	
 		if (other_modes.tex_lod_en)
 		{
@@ -10850,29 +10866,7 @@ STRICTINLINE void tclod_1cycle_next(INT32* sss, INT32* sst, INT32 s, INT32 t, IN
 		
 		tclod_4x17_to_15(nexts, fars, nextt, fart, 0, &lod);
 
-		
-		if ((lod & 0x4000) || lodclamp)
-			lod = 0x7fff;
-		else if (lod < min_level)
-			lod = min_level;
-					
-		magnify = (lod < 32) ? 1: 0;
-		l_tile =  log2table[(lod >> 5) & 0xff];
-		distant = ((lod & 0x6000) || (l_tile >= max_level)) ? 1 : 0;
-
-		*prelodfrac = ((lod << 3) >> l_tile) & 0xff;
-
-		
-		if(!other_modes.sharpen_tex_en && !other_modes.detail_tex_en)
-		{
-			if (distant)
-				*prelodfrac = 0xff;
-			else if (magnify)
-				*prelodfrac = 0;
-		}
-
-		if(other_modes.sharpen_tex_en && magnify)
-			*prelodfrac |= 0x100;
+		lodfrac_lodtile_signals(lodclamp, lod, &l_tile, &magnify, &distant, prelodfrac);
 
 		if (other_modes.tex_lod_en)
 		{
@@ -10925,7 +10919,11 @@ STRICTINLINE void tclod_copy(INT32* sss, INT32* sst, INT32 s, INT32 t, INT32 w, 
 						
 		magnify = (lod < 32) ? 1: 0;
 		l_tile =  log2table[(lod >> 5) & 0xff];
-		distant = ((lod & 0x6000) || (l_tile >= max_level)) ? 1 : 0;
+
+		if (max_level)
+			distant = ((lod & 0x6000) || (l_tile >= max_level)) ? 1 : 0;
+		else
+			distant = 1;
 
 		if (distant)
 			l_tile = max_level;
@@ -11055,7 +11053,7 @@ STRICTINLINE void tclod_tcclamp(INT32* sss, INT32* sst)
 }
 
 
-STRICTINLINE void lodfrac_lodtile_signals(int lodclamp, INT32 lod, UINT32* l_tile, UINT32* magnify, UINT32* distant)
+STRICTINLINE void lodfrac_lodtile_signals(int lodclamp, INT32 lod, UINT32* l_tile, UINT32* magnify, UINT32* distant, INT32* lfdst)
 {
 	UINT32 ltil, dis, mag;
 	INT32 lf;
@@ -11067,10 +11065,12 @@ STRICTINLINE void lodfrac_lodtile_signals(int lodclamp, INT32 lod, UINT32* l_til
 		lod = min_level;
 						
 	mag = (lod < 32) ? 1: 0;
-	ltil=  log2table[(lod >> 5) & 0xff];
-	dis = ((lod & 0x6000) || (ltil >= max_level)) ? 1 : 0;
-						
-	lf = ((lod << 3) >> ltil) & 0xff;
+	ltil =  log2table[(lod >> 5) & 0xff];
+
+	if (max_level)
+		dis = ((lod & 0x6000) || (ltil >= max_level)) ? 1 : 0;
+	else
+		dis = 1;
 
 	
 	if(!other_modes.sharpen_tex_en && !other_modes.detail_tex_en)
@@ -11079,7 +11079,11 @@ STRICTINLINE void lodfrac_lodtile_signals(int lodclamp, INT32 lod, UINT32* l_til
 			lf = 0xff;
 		else if (mag)
 			lf = 0;
+		else
+			lf = ((lod << 3) >> ltil) & 0xff;
 	}
+	else
+		lf = ((lod << 3) >> ltil) & 0xff;
 
 	
 	
@@ -11090,7 +11094,7 @@ STRICTINLINE void lodfrac_lodtile_signals(int lodclamp, INT32 lod, UINT32* l_til
 	*distant = dis;
 	*l_tile = ltil;
 	*magnify = mag;
-	lod_frac = lf;
+	*lfdst = lf;
 }
 
 
@@ -11183,18 +11187,7 @@ const char *aAText[] =
   "SHADE",			"ENV",		"1",				"0",
 };
 
-if (other_modes.cycle_type != CYCLE_TYPE_1 && other_modes.cycle_type != CYCLE_TYPE_2)
-{
-	popmessage("show_combiner_equation not implemented for cycle type %d",other_modes.cycle_type);
-	return;
-}
-
-if (other_modes.cycle_type == CYCLE_TYPE_1)
-	popmessage("Combiner equation of the 2nd cycle is (%s - %s) * %s + %s | (%s - %s) * %s + %s",saRGBText[combine.sub_a_rgb1],
-	sbRGBText[combine.sub_b_rgb1],mRGBText[combine.mul_rgb1],aRGBText[combine.add_rgb1],
-	saAText[combine.sub_a_a1],sbAText[combine.sub_b_a1],mAText[combine.mul_a1],aAText[combine.add_a1]);
-else if (other_modes.cycle_type == CYCLE_TYPE_2)
-	popmessage("Combiner equations are (%s - %s) * %s + %s | (%s - %s) * %s + %s \n (%s - %s) * %s + %s | (%s - %s) * %s + %s",
+	popmessage("Note that the 2nd-cycle equations are used in one-cycle mode.\nCombiner equations are (%s - %s) * %s + %s | (%s - %s) * %s + %s \n (%s - %s) * %s + %s | (%s - %s) * %s + %s",
 	saRGBText[combine.sub_a_rgb0],sbRGBText[combine.sub_b_rgb0],mRGBText[combine.mul_rgb0],
 	aRGBText[combine.add_rgb0],saAText[combine.sub_a_a0],sbAText[combine.sub_b_a0],
 	mAText[combine.mul_a0],aAText[combine.add_a0],
@@ -11271,7 +11264,7 @@ void showtile(UINT32 tilenum, int stop, int clamped)
 	if (nominalwidth > 619)
 		fatalerror("showtile: too large");
 
-	clearscreen(492,0,620,479,1);
+	clearscreen(492, 0, 620, 479, 1);
 
 	UINT32 y = 0;
 	INT32* d = 0;
@@ -11499,7 +11492,7 @@ endi8:
 		fatalerror("showtile: Unlock failed.");
 
 	src.bottom = 480;
-	res = IDirectDrawSurface_Blt(lpddsprimary, &dst, lpddsback,&src,DDBLT_WAIT,0);
+	res = IDirectDrawSurface_Blt(lpddsprimary, &dst, lpddsback, &src, DDBLT_WAIT, 0);
 	if (res != DD_OK)
 		fatalerror("showtile: Blt failed.");
 
