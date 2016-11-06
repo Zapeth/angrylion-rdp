@@ -4727,7 +4727,12 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 		if (bilerp)
 		{
 			if (!convert)
-				*TEX = t0;
+			{
+				TEX->r = t0.r & 0x1ff;
+				TEX->g = t0.g & 0x1ff;
+				TEX->b = t0.b;
+				TEX->a = t0.a;
+			}
 			else
 				TEX->r = TEX->g = TEX->b = TEX->a = prev->b;
 		}
