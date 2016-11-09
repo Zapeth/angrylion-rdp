@@ -1248,13 +1248,22 @@ int rdp_update()
 	int lineshifter = serration_pulses ? 0 : 1;
 	int twolines = serration_pulses ? 1 : 0;
 
-	v_start = (v_start - (ispal ? 45 : 35)) >> 1;
+	INT32 vstartoffset = ispal ? 44 : 34;
+	v_start = (v_start - vstartoffset) / 2;
 	
 	
+
 	
 	
+
+	UINT32 y_start = (vi_y_scale >> 16) & 0xfff;
+	UINT32 y_add = vi_y_scale & 0xfff;
+
 	if (v_start < 0)
+	{
+		y_start += (y_add * (UINT32)(-v_start));
 		v_start = 0;
+	}
 
 	int hres_clamped = 0;
 
@@ -1276,7 +1285,7 @@ int rdp_update()
 	INT32 h_end = hres + h_start;
 	INT32 hrightblank = PRESCALE_WIDTH - h_end;
 
-	int vactivelines = (vi_v_sync & 0x3ff) - (ispal ? 45 : 35);
+	int vactivelines = (vi_v_sync & 0x3ff) - vstartoffset;
 	if (vactivelines > PRESCALE_HEIGHT)
 		fatalerror("VI_V_SYNC_REG too big");
 	if (vactivelines < 0)
@@ -1294,8 +1303,6 @@ int rdp_update()
 	CCVG color, nextcolor, scancolor, scannextcolor;
 	int r = 0, g = 0, b = 0;
 	int xfrac = 0, yfrac = 0; 
-	UINT32 y_start = (vi_y_scale >> 16) & 0xfff;
-	UINT32 y_add = vi_y_scale & 0xfff;
 	int vi_width_low = vi_width & 0xfff;
 	int line_x = 0, next_line_x = 0, prev_line_x = 0, far_line_x = 0;
 	int cache_marker = 0, cache_next_marker = 0, divot_cache_marker = 0, divot_cache_next_marker = 0;
@@ -1761,8 +1768,6 @@ int rdp_update()
 			fatalerror("Scaled blit failed with DirectDraw error %x", res);
 		
 	}
-
-	
 
 	
 	return 0;
