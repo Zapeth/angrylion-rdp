@@ -4567,6 +4567,8 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 	INT32 maxs, maxt, invt0r, invt0g, invt0b, invt0a;
 	INT32 sfrac, tfrac, invsf, invtf;
 	int upper = 0;
+
+	
 	int bilerp = cycle ? other_modes.bi_lerp1 : other_modes.bi_lerp0;
 	int convert = other_modes.convert_one && cycle;
 	COLOR t0, t1, t2, t3;
@@ -4922,6 +4924,9 @@ void render_spans_1cycle_complete(int start, int end, int tilenum, int flip)
 		
 		if (scdiff)
 		{
+			
+			
+			scdiff &= 0xfff;
 			r += (drinc * scdiff);
 			g += (dginc * scdiff);
 			b += (dbinc * scdiff);
@@ -5122,6 +5127,7 @@ void render_spans_1cycle_notexel1(int start, int end, int tilenum, int flip)
 
 		if (scdiff)
 		{
+			scdiff &= 0xfff;
 			r += (drinc * scdiff);
 			g += (dginc * scdiff);
 			b += (dbinc * scdiff);
@@ -5272,6 +5278,7 @@ void render_spans_1cycle_notex(int start, int end, int tilenum, int flip)
 
 		if (scdiff)
 		{
+			scdiff &= 0xfff;
 			r += (drinc * scdiff);
 			g += (dginc * scdiff);
 			b += (dbinc * scdiff);
@@ -5433,6 +5440,7 @@ void render_spans_2cycle_complete(int start, int end, int tilenum, int flip)
 
 		if (scdiff)
 		{
+			scdiff &= 0xfff;
 			r += (drinc * scdiff);
 			g += (dginc * scdiff);
 			b += (dbinc * scdiff);
@@ -5631,6 +5639,7 @@ void render_spans_2cycle_notexelnext(int start, int end, int tilenum, int flip)
 
 		if (scdiff)
 		{
+			scdiff &= 0xfff;
 			r += (drinc * scdiff);
 			g += (dginc * scdiff);
 			b += (dbinc * scdiff);
@@ -5799,6 +5808,7 @@ void render_spans_2cycle_notexel1(int start, int end, int tilenum, int flip)
 
 		if (scdiff)
 		{
+			scdiff &= 0xfff;
 			r += (drinc * scdiff);
 			g += (dginc * scdiff);
 			b += (dbinc * scdiff);
@@ -5951,6 +5961,7 @@ void render_spans_2cycle_notex(int start, int end, int tilenum, int flip)
 
 		if (scdiff)
 		{
+			scdiff &= 0xfff;
 			r += (drinc * scdiff);
 			g += (dginc * scdiff);
 			b += (dbinc * scdiff);
@@ -6514,6 +6525,8 @@ static void edgewalker_for_prims(INT32* ewdata)
 	xm = SIGN(ewdata[6], 28);
 	
 	dxldy = SIGN(ewdata[3], 30);
+
+	
 	
 	dxhdy = SIGN(ewdata[5], 30);
 	dxmdy = SIGN(ewdata[7], 30);
@@ -6816,7 +6829,10 @@ static void edgewalker_for_prims(INT32* ewdata)
 			
 			if (spix == ldflag)
 			{
-				span[j].unscrx = xright >> 16;
+				
+				
+				
+				span[j].unscrx = SIGN(xright >> 16, 12);
 				xfrac = (xright >> 8) & 0xff;
 				ADJUST_ATTR_PRIM();
 			}
@@ -6901,7 +6917,7 @@ static void edgewalker_for_prims(INT32* ewdata)
 
 			if (spix == ldflag)
 			{
-				span[j].unscrx  = xright >> 16;
+				span[j].unscrx  = SIGN(xright >> 16, 12);
 				xfrac = (xright >> 8) & 0xff;
 				ADJUST_ATTR_PRIM();
 			}
@@ -7594,6 +7610,7 @@ static void rdp_tri_texshade_z(UINT32 w1, UINT32 w2)
 
 	
 	
+	
 
 	edgewalker_for_prims(ewdata);
 
@@ -7664,7 +7681,7 @@ static void rdp_tex_rect_flip(UINT32 w1, UINT32 w2)
 {
 	UINT32 w3 = rdp_cmd_data[rdp_cmd_cur+2];
 	UINT32 w4 = rdp_cmd_data[rdp_cmd_cur+3];
-	
+
 	
 	UINT32 tilenum	= (w2 >> 24) & 0x7;
 	UINT32 xl = (w1 >> 12) & 0xfff;
@@ -7741,6 +7758,7 @@ static void rdp_sync_full(UINT32 w1, UINT32 w2)
 	
 	
 
+	
 	
 	
 	
