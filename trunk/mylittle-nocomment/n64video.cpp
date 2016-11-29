@@ -898,22 +898,23 @@ STRICTINLINE void tcshift_copy(INT32* S, INT32* T, UINT32 num)
 }
 
 
+
 STRICTINLINE void tcclamp_cycle(INT32* S, INT32* T, INT32* SFRAC, INT32* TFRAC, INT32 maxs, INT32 maxt, INT32 num)
 {
+
+
 
 	INT32 locs = *S, loct = *T;
 	if (tile[num].f.clampens)
 	{
-		if (!(locs & 0x10000))
+		
+		if (maxs)
 		{
-			if (!maxs)
-				*S = (locs >> 5);
-			else
-			{
-				*S = tile[num].f.clampdiffs;
-				*SFRAC = 0;
-			}
+			*S = tile[num].f.clampdiffs;
+			*SFRAC = 0;
 		}
+		else if (!(locs & 0x10000))
+			*S = locs >> 5;
 		else
 		{
 			*S = 0;
@@ -925,16 +926,13 @@ STRICTINLINE void tcclamp_cycle(INT32* S, INT32* T, INT32* SFRAC, INT32* TFRAC, 
 
 	if (tile[num].f.clampent)
 	{
-		if (!(loct & 0x10000))
+		if (maxt)
 		{
-			if (!maxt)
-				*T = (loct >> 5);
-			else
-			{
-				*T = tile[num].f.clampdifft;
-				*TFRAC = 0;
-			}
+			*T = tile[num].f.clampdifft;
+			*TFRAC = 0;
 		}
+		else if (!(loct & 0x10000))
+			*T = loct >> 5;
 		else
 		{
 			*T = 0;
@@ -951,13 +949,10 @@ STRICTINLINE void tcclamp_cycle_light(INT32* S, INT32* T, INT32 maxs, INT32 maxt
 	INT32 locs = *S, loct = *T;
 	if (tile[num].f.clampens)
 	{
-		if (!(locs & 0x10000))
-		{
-			if (!maxs)
-				*S = (locs >> 5);
-			else
-				*S = tile[num].f.clampdiffs;
-		}
+		if (maxs)
+			*S = tile[num].f.clampdiffs;
+		else if (!(locs & 0x10000))
+			*S = locs >> 5;
 		else
 			*S = 0;
 	}
@@ -966,13 +961,10 @@ STRICTINLINE void tcclamp_cycle_light(INT32* S, INT32* T, INT32 maxs, INT32 maxt
 
 	if (tile[num].f.clampent)
 	{
-		if (!(loct & 0x10000))
-		{
-			if (!maxt)
-				*T = (loct >> 5);
-			else
-				*T = tile[num].f.clampdifft;
-		}
+		if (maxt)
+			*T = tile[num].f.clampdifft;
+		else if (!(loct & 0x10000))
+			*T = loct >> 5;
 		else
 			*T = 0;
 	}
@@ -4556,7 +4548,7 @@ void fetch_qword_copy(UINT32* hidword, UINT32* lowdword, INT32 ssss, INT32 ssst,
 
 STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT32 SST, UINT32 tilenum, UINT32 cycle)											
 {
-#define TRELATIVE(x, y) 	((x) - ((y) << 3));
+#define TRELATIVE(x, y) 	((x) - ((y) << 3))
 
 
 #define UPPER ((sfrac + tfrac) & 0x20)
@@ -4579,8 +4571,10 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 
 	tcshift_cycle(&sss1, &sst1, &maxs, &maxt, tilenum);
 
+
 	sss1 = TRELATIVE(sss1, tile[tilenum].sl);
 	sst1 = TRELATIVE(sst1, tile[tilenum].tl);
+
 
 	if (other_modes.sample_type)
 	{	
