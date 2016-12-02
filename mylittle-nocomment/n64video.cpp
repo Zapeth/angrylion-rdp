@@ -2686,7 +2686,8 @@ STRICTINLINE int blender_2cycle(UINT32* fr, UINT32* fg, UINT32* fb, int dith, UI
 
 INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 {
-	UINT32 tbase = tile[tilenum].line * t + tile[tilenum].tmem;
+	UINT32 tbase = tile[tilenum].line * (t & 0xff) + tile[tilenum].tmem;
+	
 	
 
 	UINT32 tpal	= tile[tilenum].palette;
@@ -3008,7 +3009,7 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 
 INLINE void fetch_texel_entlut(COLOR *color, int s, int t, UINT32 tilenum)
 {
-	UINT32 tbase = tile[tilenum].line * t + tile[tilenum].tmem;
+	UINT32 tbase = tile[tilenum].line * (t & 0xff) + tile[tilenum].tmem;
 	UINT32 tpal	= tile[tilenum].palette << 4;
 	UINT16 *tc16 = (UINT16*)TMEM;
 	UINT32 taddr = 0;
@@ -3111,8 +3112,8 @@ INLINE void fetch_texel_entlut(COLOR *color, int s, int t, UINT32 tilenum)
 INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLOR *color3, int s0, int s1, int t0, int t1, UINT32 tilenum)
 {
 
-	UINT32 tbase0 = tile[tilenum].line * t0 + tile[tilenum].tmem;
-	UINT32 tbase2 = tile[tilenum].line * t1 + tile[tilenum].tmem;
+	UINT32 tbase0 = tile[tilenum].line * (t0 & 0xff) + tile[tilenum].tmem;
+	UINT32 tbase2 = tile[tilenum].line * (t1 & 0xff) + tile[tilenum].tmem;
 	UINT32 tpal	= tile[tilenum].palette;
 	UINT32 xort = 0, ands = 0;
 
@@ -3951,8 +3952,8 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 
 INLINE void fetch_texel_entlut_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLOR *color3, int s0, int s1, int t0, int t1, UINT32 tilenum)
 {
-	UINT32 tbase0 = tile[tilenum].line * t0 + tile[tilenum].tmem;
-	UINT32 tbase2 = tile[tilenum].line * t1 + tile[tilenum].tmem;
+	UINT32 tbase0 = tile[tilenum].line * (t0 & 0xff) + tile[tilenum].tmem;
+	UINT32 tbase2 = tile[tilenum].line * (t1 & 0xff) + tile[tilenum].tmem;
 	UINT32 tpal	= tile[tilenum].palette << 4;
 	UINT32 xort = 0, ands = 0;
 
