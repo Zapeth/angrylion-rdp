@@ -198,11 +198,12 @@ typedef struct
 	int dolod;
 	int partialreject_1cycle; 
 	int partialreject_2cycle;
-	int special_bsel0; 
-	int special_bsel1;
 	int rgb_alpha_dither;
 	int realblendershiftersneeded;
 	int interpixelblendershiftersneeded;
+	int getditherlevel;
+	int textureuselevel0;
+	int textureuselevel1;
 } MODEDERIVS;
 
 typedef struct
@@ -319,9 +320,7 @@ static INT32 primitive_lod_frac = 0;
 static INT32 one_color = 0x100;
 static INT32 zero_color = 0x00;
 
-INT32 keyalpha;
-
-static INT32 blenderone	= 0xff;
+static INT32 blenderone = 0xff;
 
 
 static INT32 *combiner_rgbsub_a_r[2];
@@ -446,6 +445,7 @@ STRICTINLINE void blender_equation_cycle0_2(int* r, int* g, int* b);
 STRICTINLINE void blender_equation_cycle1(int* r, int* g, int* b);
 STRICTINLINE UINT32 rightcvghex(UINT32 x, UINT32 fmask); 
 STRICTINLINE UINT32 leftcvghex(UINT32 x, UINT32 fmask);
+STRICTINLINE INT32 chroma_key_min(COLOR* col);
 STRICTINLINE void compute_cvg_noflip(INT32 scanline);
 STRICTINLINE void compute_cvg_flip(INT32 scanline);
 INLINE void fbwrite_4(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg);
@@ -475,7 +475,7 @@ STRICTINLINE void z_store(UINT32 zcurpixel, UINT32 z, int dzpixenc);
 STRICTINLINE UINT32 z_compare(UINT32 zcurpixel, UINT32 sz, UINT16 dzpix, int dzpixenc, UINT32* blend_en, UINT32* prewrap, UINT32* curpixel_cvg, UINT32 curpixel_memcvg);
 STRICTINLINE int finalize_spanalpha(UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg);
 STRICTINLINE INT32 normalize_dzpix(INT32 sum);
-STRICTINLINE INT32 CLIP(INT32 value,INT32 min,INT32 max);
+STRICTINLINE INT32 CLIP(INT32 value, INT32 min, INT32 max);
 STRICTINLINE void video_filter16(int* r, int* g, int* b, UINT32 fboffset, UINT32 num, UINT32 hres, UINT32 centercvg, UINT32 fetchstate);
 STRICTINLINE void video_filter32(int* endr, int* endg, int* endb, UINT32 fboffset, UINT32 num, UINT32 hres, UINT32 centercvg, UINT32 fetchstate);
 STRICTINLINE void divot_filter(CCVG* final, CCVG centercolor, CCVG leftcolor, CCVG rightcolor);
@@ -503,11 +503,8 @@ STRICTINLINE void get_nexttexel0_2cycle(INT32* s1, INT32* t1, INT32 s, INT32 t, 
 STRICTINLINE void video_max_optimized(UINT32* Pixels, UINT32* penumin, UINT32* penumax, int numofels);
 INLINE void calculate_clamp_diffs(UINT32 tile);
 INLINE void calculate_tile_derivs(UINT32 tile);
-INLINE void rgb_dither_complete(int* r, int* g, int* b, int dith);
-INLINE void rgb_dither_nothing(int* r, int* g, int* b, int dith);
-INLINE void get_dither_noise_complete(int x, int y, int* cdith, int* adith);
-INLINE void get_dither_only(int x, int y, int* cdith, int* adith);
-INLINE void get_dither_nothing(int x, int y, int* cdith, int* adith);
+STRICTINLINE void rgb_dither(int* r, int* g, int* b, int dith);
+STRICTINLINE void get_dither_noise(int x, int y, int* cdith, int* adith);
 STRICTINLINE void vi_vl_lerp(CCVG* up, CCVG down, UINT32 frac);
 STRICTINLINE void rgbaz_correct_clip(int offx, int offy, int r, int g, int b, int a, int* z, UINT32 curpixel_cvg);
 STRICTINLINE void vi_fetch_filter16(CCVG* res, UINT32 fboffset, UINT32 cur_x, UINT32 fsaa, UINT32 dither_filter, UINT32 vres, UINT32 fetchstate);
@@ -570,45 +567,19 @@ static void (*fbwrite_func[4])(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, U
 	fbwrite_4, fbwrite_8, fbwrite_16, fbwrite_32
 };
 
-static void (*fbfill_func[4])(UINT32) =
-{
-	fbfill_4, fbfill_8, fbfill_16, fbfill_32
-};
-
-static void (*get_dither_noise_func[3])(int, int, int*, int*) = 
-{
-	get_dither_noise_complete, get_dither_only, get_dither_nothing
-};
-
-static void (*rgb_dither_func[2])(int*, int*, int*, int) =
-{
-	rgb_dither_complete, rgb_dither_nothing
-};
-
 static void (*tcdiv_func[2])(INT32, INT32, INT32, INT32*, INT32*) =
 {
 	tcdiv_nopersp, tcdiv_persp
 };
 
-static void (*render_spans_1cycle_func[3])(int, int, int, int) =
-{
-	render_spans_1cycle_notex, render_spans_1cycle_notexel1, render_spans_1cycle_complete
-};
-
-static void (*render_spans_2cycle_func[4])(int, int, int, int) =
-{
-	render_spans_2cycle_notex, render_spans_2cycle_notexel1, render_spans_2cycle_notexelnext, render_spans_2cycle_complete
-};
 
 void (*fbread1_ptr)(UINT32, UINT32*) = fbread_func[0];
 void (*fbread2_ptr)(UINT32, UINT32*) = fbread2_func[0];
 void (*fbwrite_ptr)(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) = fbwrite_func[0];
-void (*fbfill_ptr)(UINT32) = fbfill_func[0];
-void (*get_dither_noise_ptr)(int, int, int*, int*) = get_dither_noise_func[0];
-void (*rgb_dither_ptr)(int*, int*, int*, int) = rgb_dither_func[0];
+
 void (*tcdiv_ptr)(INT32, INT32, INT32, INT32*, INT32*) = tcdiv_func[0];
-void (*render_spans_1cycle_ptr)(int, int, int, int) = render_spans_1cycle_func[2];
-void (*render_spans_2cycle_ptr)(int, int, int, int) = render_spans_2cycle_func[1];
+
+void (*vi_fetch_filter_ptr)(CCVG*, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) = vi_fetch_filter_func[0];
 
 typedef struct{
 	UINT8 cvg;
@@ -1138,7 +1109,7 @@ int rdp_update()
 	
 	
 
-	void (*vi_fetch_filter_ptr)(CCVG*, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) = vi_fetch_filter_func[vitype & 1];
+	vi_fetch_filter_ptr = vi_fetch_filter_func[vitype & 1];
 
 	int ispal = (vi_v_sync & 0x3ff) > 550;
 
@@ -1980,7 +1951,7 @@ INLINE void SET_MUL_ALPHA_INPUT(INT32 **input, int code)
 STRICTINLINE void combiner_1cycle(int adseed, UINT32* curpixel_cvg)
 {
 
-	INT32 redkey, greenkey, bluekey, temp;
+	INT32 keyalpha, temp;
 	COLOR chromabypass;
 
 	if (other_modes.key_en)
@@ -2045,24 +2016,7 @@ STRICTINLINE void combiner_1cycle(int adseed, UINT32* curpixel_cvg)
 	}
 	else
 	{
-		redkey = SIGN(combined_color.r, 17);
-		if (redkey >= 0)
-			redkey = (key_width.r << 4) - redkey;
-		else
-			redkey = (key_width.r << 4) + redkey;
-		greenkey = SIGN(combined_color.g, 17);
-		if (greenkey >= 0)
-			greenkey = (key_width.g << 4) - greenkey;
-		else
-			greenkey = (key_width.g << 4) + greenkey;
-		bluekey = SIGN(combined_color.b, 17);
-		if (bluekey >= 0)
-			bluekey = (key_width.b << 4) - bluekey;
-		else
-			bluekey = (key_width.b << 4) + bluekey;
-		keyalpha = (redkey < greenkey) ? redkey : greenkey;
-		keyalpha = (bluekey < keyalpha) ? bluekey : keyalpha;
-		keyalpha = CLIP(keyalpha, 0, 0xff);
+		keyalpha = chroma_key_min(&combined_color);
 
 		
 		
@@ -2111,7 +2065,7 @@ STRICTINLINE void combiner_1cycle(int adseed, UINT32* curpixel_cvg)
 
 STRICTINLINE void combiner_2cycle(int adseed, UINT32* curpixel_cvg, INT32* acalpha)
 {
-	INT32 redkey, greenkey, bluekey, temp;
+	INT32 keyalpha, temp;
 	COLOR chromabypass;
 
 	if (combiner_rgbmul_r[0] != &zero_color)
@@ -2137,26 +2091,7 @@ STRICTINLINE void combiner_2cycle(int adseed, UINT32* curpixel_cvg, INT32* acalp
 	if (other_modes.alpha_compare_en)
 	{
 		if (other_modes.key_en)
-		{
-			redkey = SIGN(combined_color.r, 17);
-			if (redkey >= 0)
-				redkey = (key_width.r << 4) - redkey;
-			else
-				redkey = (key_width.r << 4) + redkey;
-			greenkey = SIGN(combined_color.g, 17);
-			if (greenkey >= 0)
-				greenkey = (key_width.g << 4) - greenkey;
-			else
-				greenkey = (key_width.g << 4) + greenkey;
-			bluekey = SIGN(combined_color.b, 17);
-			if (bluekey >= 0)
-				bluekey = (key_width.b << 4) - bluekey;
-			else
-				bluekey = (key_width.b << 4) + bluekey;
-			keyalpha = (redkey < greenkey) ? redkey : greenkey;
-			keyalpha = (bluekey < keyalpha) ? bluekey : keyalpha;
-			keyalpha = CLIP(keyalpha, 0, 0xff);
-		}
+			keyalpha = chroma_key_min(&combined_color);
 
 		INT32 preacalpha = special_9bit_clamptable[combined_color.a];
 		if (preacalpha == 0xff)
@@ -2247,24 +2182,7 @@ STRICTINLINE void combiner_2cycle(int adseed, UINT32* curpixel_cvg, INT32* acalp
 	}
 	else
 	{
-		redkey = SIGN(combined_color.r, 17);
-		if (redkey >= 0)
-			redkey = (key_width.r << 4) - redkey;
-		else
-			redkey = (key_width.r << 4) + redkey;
-		greenkey = SIGN(combined_color.g, 17);
-		if (greenkey >= 0)
-			greenkey = (key_width.g << 4) - greenkey;
-		else
-			greenkey = (key_width.g << 4) + greenkey;
-		bluekey = SIGN(combined_color.b, 17);
-		if (bluekey >= 0)
-			bluekey = (key_width.b << 4) - bluekey;
-		else
-			bluekey = (key_width.b << 4) + bluekey;
-		keyalpha = (redkey < greenkey) ? redkey : greenkey;
-		keyalpha = (bluekey < keyalpha) ? bluekey : keyalpha;
-		keyalpha = CLIP(keyalpha, 0, 0xff);
+		keyalpha = chroma_key_min(&combined_color);
 
 		
 		
@@ -2603,7 +2521,7 @@ STRICTINLINE int blender_1cycle(UINT32* fr, UINT32* fg, UINT32* fb, int dith, UI
 		
 		
 		
-		if (other_modes.antialias_en ? (curpixel_cvg) : (curpixel_cvbit))
+		if (other_modes.antialias_en ? curpixel_cvg : curpixel_cvbit)
 		{
 
 			if (!other_modes.color_on_cvg || prewrap)
@@ -2633,7 +2551,9 @@ STRICTINLINE int blender_1cycle(UINT32* fr, UINT32* fg, UINT32* fb, int dith, UI
 				b = *blender2a_b[0];
 			}
 
-			rgb_dither_ptr(&r, &g, &b, dith);
+			if (other_modes.rgb_dither_sel != 3)
+				rgb_dither(&r, &g, &b, dith);
+
 			*fr = r;
 			*fg = g;
 			*fb = b;
@@ -2690,7 +2610,8 @@ STRICTINLINE int blender_2cycle(UINT32* fr, UINT32* fg, UINT32* fb, int dith, UI
 			}
 
 			
-			rgb_dither_ptr(&r, &g, &b, dith);
+			if (other_modes.rgb_dither_sel != 3)
+				rgb_dither(&r, &g, &b, dith);
 			*fr = r;
 			*fg = g;
 			*fb = b;
@@ -2839,7 +2760,6 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 		}
 		break;
 	case TEXEL_YUV16:
-	case TEXEL_YUV32:
 		{
 			taddr = (tbase << 3) + s;
 			int taddrlow = taddr >> 1;
@@ -2854,6 +2774,7 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 					
 			INT32 y, u, v;
 			y = TMEM[taddr | 0x800];
+
 			u = c >> 8;
 			v = c & 0xff;
 
@@ -2866,6 +2787,48 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 			color->g = v;
 			color->b = y;
 			color->a = y;
+		}
+		break;
+	case TEXEL_YUV32:
+		{
+			int taddrlow;
+			UINT16 c;
+			INT32 y, u, v;
+
+			taddr = (tbase << 3) + s;
+			taddrlow = taddr >> 1;
+
+			taddrlow ^= ((t & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR);
+
+			taddrlow &= 0x3ff;
+					
+			c = tc16[taddrlow];
+
+			u = c >> 8;
+			v = c & 0xff;
+
+			u = u - 0x80;
+			v = v - 0x80;
+
+			color->r = u;
+			color->g = v;
+
+			if (s & 1)
+			{
+				taddr ^= ((t & 1) ? BYTE_XOR_DWORD_SWAP : BYTE_ADDR_XOR);
+				taddr &= 0x7ff;
+				y = TMEM[taddr | 0x800];
+
+				color->b = y;
+				color->a = y;
+			}
+			else
+			{
+				y = tc16[taddrlow | 0x400];
+
+				color->b = y >> 8;
+				color->a = ((y >> 8) & 0xf) | (y & 0xf0);
+			}
 		}
 		break;
 	case TEXEL_CI4:
@@ -2899,6 +2862,7 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 		}
 		break;
 	case TEXEL_CI16:
+	case TEXEL_CI32:
 		{
 			taddr = (tbase << 2) + s;
 			taddr ^= ((t & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR);
@@ -2909,24 +2873,9 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 			color->r = c >> 8;
 			color->g = c & 0xff;
 			color->b = color->r;
-			color->a = (c & 1) ? 0xff : 0;
+			color->a = color->g;
 		}
-		break;
-	case TEXEL_CI32:
-		{
-			taddr = (tbase << 2) + s;
-			taddr ^= ((t & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR);
-					
-			UINT16 c;
-					
-			c = tc16[taddr & 0x7ff];
-			color->r = c >> 8;
-			color->g = c & 0xff;
-			color->b = color->r;
-			color->a = (c & 1) ? 0xff : 0;
-			
-		}
-        break;
+		break;	
 	case TEXEL_IA4:
 		{
 			taddr = ((tbase << 4) + s) >> 1;
@@ -2987,7 +2936,7 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 			color->r = c >> 8;
 			color->g = c & 0xff;
 			color->b = color->r;
-			color->a = (c & 1) ? 0xff : 0;
+			color->a = color->g;
 		}
 		break;
 	case TEXEL_I4:
@@ -3021,6 +2970,8 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 		}
 		break;
 	case TEXEL_I16:
+	case TEXEL_I32:
+	default:
 		{
 			taddr = (tbase << 2) + s;
 			taddr ^= ((t & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR);
@@ -3031,22 +2982,7 @@ INLINE void fetch_texel(COLOR *color, int s, int t, UINT32 tilenum)
 			color->r = c >> 8;
 			color->g = c & 0xff;
 			color->b = color->r;
-			color->a = (c & 1) ? 0xff : 0;
-		}
-		break;
-	case TEXEL_I32:
-	default:
-		{
-			taddr = (tbase << 2) + s;
-			taddr ^= ((t & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR);
-					
-			UINT16 c;
-					
-			c = tc16[taddr & 0x7ff];
-			color->r = c >> 8;
-			color->g = c & 0xff;
-			color->b = color->r;
-			color->a = (c & 1) ? 0xff : 0;
+			color->a = color->g;
 		}
 		break;
 	}
@@ -3370,7 +3306,6 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 		}
 		break;
 	case TEXEL_YUV16:
-	case TEXEL_YUV32:
 		{
 			taddr0 = (tbase0 << 3) + s0;
 			taddr1 = (tbase0 << 3) + s1;
@@ -3448,6 +3383,126 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 			color1->b = color1->a = y1;
 			color2->b = color2->a = y2;
 			color3->b = color3->a = y3;
+		}
+		break;
+	case TEXEL_YUV32:
+		{
+			UINT16 c0, c1, c2, c3;
+			INT32 y0, y1, y2, y3, u0, u1, u2, u3, v0, v1, v2, v3;
+			UINT32 xort0, xort1;
+
+			taddr0 = (tbase0 << 3) + s0;
+			taddr1 = (tbase0 << 3) + s1;
+			taddr2 = (tbase2 << 3) + s0;
+			taddr3 = (tbase2 << 3) + s1;
+
+			taddrlow0 = (taddr0) >> 1;
+			taddrlow1 = (taddr1 + sdiff) >> 1;
+			taddrlow2 = (taddr2) >> 1;
+			taddrlow3 = (taddr3 + sdiff) >> 1;
+
+			xort = (t0 & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR;
+			taddrlow0 ^= xort;
+			taddrlow1 ^= xort;
+			xort = (t1 & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR;
+			taddrlow2 ^= xort;
+			taddrlow3 ^= xort;
+
+			taddrlow0 &= 0x3ff;
+			taddrlow1 &= 0x3ff;
+			taddrlow2 &= 0x3ff;
+			taddrlow3 &= 0x3ff;
+
+			c0 = tc16[taddrlow0];
+			c1 = tc16[taddrlow1];
+			c2 = tc16[taddrlow2];
+			c3 = tc16[taddrlow3];					
+			
+			u0 = c0 >> 8;
+			v0 = c0 & 0xff;			
+			u1 = c1 >> 8;
+			v1 = c1 & 0xff;			
+			u2 = c2 >> 8;
+			v2 = c2 & 0xff;			
+			u3 = c3 >> 8;
+			v3 = c3 & 0xff;
+
+			u0 = u0 - 0x80;
+			v0 = v0 - 0x80;
+			u1 = u1 - 0x80;
+			v1 = v1 - 0x80;
+			u2 = u2 - 0x80;
+			v2 = v2 - 0x80;
+			u3 = u3 - 0x80;
+			v3 = v3 - 0x80;
+
+			color0->r = u0;
+			color0->g = v0;
+			color1->r = u1;
+			color1->g = v1;
+			color2->r = u2;
+			color2->g = v2;
+			color3->r = u3;
+			color3->g = v3;
+
+			xort0 = (t0 & 1) ? BYTE_XOR_DWORD_SWAP : BYTE_ADDR_XOR;
+			xort1 = (t1 & 1) ? BYTE_XOR_DWORD_SWAP : BYTE_ADDR_XOR;
+
+			if (s0 & 1)
+			{
+				taddr0 ^= xort0;
+				taddr2 ^= xort1;
+
+				taddr0 &= 0x7ff;
+				taddr2 &= 0x7ff;
+
+				y0 = TMEM[taddr0 | 0x800];
+				y2 = TMEM[taddr2 | 0x800];
+
+				color0->b = color0->a = y0;
+				color2->b = color2->a = y2;
+			}
+			else
+			{
+				y0 = tc16[taddrlow0 | 0x400];
+				y2 = tc16[taddrlow2 | 0x400];
+
+				color0->b = y0 >> 8;
+				color0->a = ((y0 >> 8) & 0xf) | (y0 & 0xf0);
+				color2->b = y2 >> 8;
+				color2->a = ((y2 >> 8) & 0xf) | (y2 & 0xf0);
+			}
+
+			if (s1 & 1)
+			{
+				taddr1 ^= xort0;
+				taddr3 ^= xort1;
+
+				taddr1 &= 0x7ff;
+				taddr3 &= 0x7ff;
+
+				y1 = TMEM[taddr1 | 0x800];
+				y3 = TMEM[taddr3 | 0x800];
+
+				color1->b = color1->a = y1;
+				color3->b = color3->a = y3;
+			}
+			else
+			{
+				taddr1 ^= xort0;
+				taddr3 ^= xort1;
+
+				taddr1 = (taddr1 >> 1) & 0x3ff;
+				taddr3 = (taddr3 >> 1) & 0x3ff;
+
+				y1 = tc16[taddr1 | 0x400];
+				y3 = tc16[taddr3 | 0x400];
+
+				color1->b = y1 >> 8;
+				color1->a = ((y1 >> 8) & 0xf) | (y1 & 0xf0);
+				color3->b = y3 >> 8;
+				color3->a = ((y3 >> 8) & 0xf) | (y3 & 0xf0);
+			}
 		}
 		break;
 	case TEXEL_CI4:
@@ -3532,47 +3587,6 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 		}
 		break;
 	case TEXEL_CI16:
-		{
-			taddr0 = (tbase0 << 2) + s0;
-			taddr1 = (tbase0 << 2) + s1;
-			taddr2 = (tbase2 << 2) + s0;
-			taddr3 = (tbase2 << 2) + s1;
-			xort = (t0 & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR;
-			taddr0 ^= xort;
-			taddr1 ^= xort;
-			xort = (t1 & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR;
-			taddr2 ^= xort;
-			taddr3 ^= xort;
-								
-			UINT16 c0, c1, c2, c3;
-					
-			taddr0 &= 0x7ff;
-			taddr1 &= 0x7ff;
-			taddr2 &= 0x7ff;
-			taddr3 &= 0x7ff;
-			c0 = tc16[taddr0];
-			color0->r = c0 >> 8;
-			color0->g = c0 & 0xff;
-			color0->b = c0 >> 8;
-			color0->a = (c0 & 1) ? 0xff : 0;
-			c1 = tc16[taddr1];
-			color1->r = c1 >> 8;
-			color1->g = c1 & 0xff;
-			color1->b = c1 >> 8;
-			color1->a = (c1 & 1) ? 0xff : 0;
-			c2 = tc16[taddr2];
-			color2->r = c2 >> 8;
-			color2->g = c2 & 0xff;
-			color2->b = c2 >> 8;
-			color2->a = (c2 & 1) ? 0xff : 0;
-			c3 = tc16[taddr3];
-			color3->r = c3 >> 8;
-			color3->g = c3 & 0xff;
-			color3->b = c3 >> 8;
-			color3->a = (c3 & 1) ? 0xff : 0;
-			
-		}
-		break;
 	case TEXEL_CI32:
 		{
 			taddr0 = (tbase0 << 2) + s0;
@@ -3596,25 +3610,24 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 			color0->r = c0 >> 8;
 			color0->g = c0 & 0xff;
 			color0->b = c0 >> 8;
-			color0->a = (c0 & 1) ? 0xff : 0;
+			color0->a = c0 & 0xff;
 			c1 = tc16[taddr1];
 			color1->r = c1 >> 8;
 			color1->g = c1 & 0xff;
 			color1->b = c1 >> 8;
-			color1->a = (c1 & 1) ? 0xff : 0;
+			color1->a = c1 & 0xff;
 			c2 = tc16[taddr2];
 			color2->r = c2 >> 8;
 			color2->g = c2 & 0xff;
 			color2->b = c2 >> 8;
-			color2->a = (c2 & 1) ? 0xff : 0;
+			color2->a = c2 & 0xff;
 			c3 = tc16[taddr3];
 			color3->r = c3 >> 8;
 			color3->g = c3 & 0xff;
 			color3->b = c3 >> 8;
-			color3->a = (c3 & 1) ? 0xff : 0;
-			
+			color3->a = c3 & 0xff;			
 		}
-        break;
+		break;
 	case TEXEL_IA4:
 		{
 			taddr0 = ((tbase0 << 4) + s0) >> 1;
@@ -3668,8 +3681,7 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 			color3->r = i;
 			color3->g = i;
 			color3->b = i;
-			color3->a = (p & 0x1) ? 0xff : 0;
-			
+			color3->a = (p & 0x1) ? 0xff : 0;			
 		}
 		break;
 	case TEXEL_IA8:
@@ -3718,9 +3730,7 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 			color3->r = i;
 			color3->g = i;
 			color3->b = i;
-			color3->a = ((p & 0xf) << 4) | (p & 0xf);
-			
-			
+			color3->a = ((p & 0xf) << 4) | (p & 0xf);			
 		}
 		break;
 	case TEXEL_IA16:
@@ -3780,22 +3790,22 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 			color0->r = c0 >> 8;
 			color0->g = c0 & 0xff;
 			color0->b = c0 >> 8;
-			color0->a = (c0 & 1) ? 0xff : 0;
+			color0->a = c0 & 0xff;
 			c1 = tc16[taddr1];
 			color1->r = c1 >> 8;
 			color1->g = c1 & 0xff;
 			color1->b = c1 >> 8;
-			color1->a = (c1 & 1) ? 0xff : 0;
+			color1->a = c1 & 0xff;
 			c2 = tc16[taddr2];
 			color2->r = c2 >> 8;
 			color2->g = c2 & 0xff;
 			color2->b = c2 >> 8;
-			color2->a = (c2 & 1) ? 0xff : 0;
+			color2->a = c2 & 0xff;
 			c3 = tc16[taddr3];
 			color3->r = c3 >> 8;
 			color3->g = c3 & 0xff;
 			color3->b = c3 >> 8;
-			color3->a = (c3 & 1) ? 0xff : 0;
+			color3->a = c3 & 0xff;
 						
 		}
 		break;
@@ -3883,46 +3893,6 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 		}
 		break;
 	case TEXEL_I16:
-		{
-			taddr0 = (tbase0 << 2) + s0;
-			taddr1 = (tbase0 << 2) + s1;
-			taddr2 = (tbase2 << 2) + s0;
-			taddr3 = (tbase2 << 2) + s1;
-			xort = (t0 & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR;
-			taddr0 ^= xort;
-			taddr1 ^= xort;
-			xort = (t1 & 1) ? WORD_XOR_DWORD_SWAP : WORD_ADDR_XOR;
-			taddr2 ^= xort;
-			taddr3 ^= xort;
-								
-			UINT16 c0, c1, c2, c3;
-					
-			taddr0 &= 0x7ff;
-			taddr1 &= 0x7ff;
-			taddr2 &= 0x7ff;
-			taddr3 &= 0x7ff;
-			c0 = tc16[taddr0];
-			color0->r = c0 >> 8;
-			color0->g = c0 & 0xff;
-			color0->b = c0 >> 8;
-			color0->a = (c0 & 1) ? 0xff : 0;
-			c1 = tc16[taddr1];
-			color1->r = c1 >> 8;
-			color1->g = c1 & 0xff;
-			color1->b = c1 >> 8;
-			color1->a = (c1 & 1) ? 0xff : 0;
-			c2 = tc16[taddr2];
-			color2->r = c2 >> 8;
-			color2->g = c2 & 0xff;
-			color2->b = c2 >> 8;
-			color2->a = (c2 & 1) ? 0xff : 0;
-			c3 = tc16[taddr3];
-			color3->r = c3 >> 8;
-			color3->g = c3 & 0xff;
-			color3->b = c3 >> 8;
-			color3->a = (c3 & 1) ? 0xff : 0;
-		}
-		break;
 	case TEXEL_I32:
 	default:
 		{
@@ -3947,22 +3917,22 @@ INLINE void fetch_texel_quadro(COLOR *color0, COLOR *color1, COLOR *color2, COLO
 			color0->r = c0 >> 8;
 			color0->g = c0 & 0xff;
 			color0->b = c0 >> 8;
-			color0->a = (c0 & 1) ? 0xff : 0;
+			color0->a = c0 & 0xff;
 			c1 = tc16[taddr1];
 			color1->r = c1 >> 8;
 			color1->g = c1 & 0xff;
 			color1->b = c1 >> 8;
-			color1->a = (c1 & 1) ? 0xff : 0;
+			color1->a = c1 & 0xff;
 			c2 = tc16[taddr2];
 			color2->r = c2 >> 8;
 			color2->g = c2 & 0xff;
 			color2->b = c2 >> 8;
-			color2->a = (c2 & 1) ? 0xff : 0;
+			color2->a = c2 & 0xff;
 			c3 = tc16[taddr3];
 			color3->r = c3 >> 8;
 			color3->g = c3 & 0xff;
 			color3->b = c3 >> 8;
-			color3->a = (c3 & 1) ? 0xff : 0;
+			color3->a = c3 & 0xff;
 		}
 		break;
 	}
@@ -4935,13 +4905,13 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 				
 				center = (sfrac == 0x10 && tfrac == 0x10);
 				centerrg = (sfracrg == 0x10 && tfrac == 0x10);
-			}
+			}			
 
-			invtf = 0x20 - tfrac;
-
-			if (!centerrg)
+			if (!convert)
 			{
-				if (!convert)
+				invtf = 0x20 - tfrac;
+
+				if (!centerrg)
 				{
 					
 					
@@ -4961,54 +4931,64 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 				}
 				else
 				{
-					if (upperrg)
-					{
-						TEX->r = prev->b + ((prev->r * (t2.r - t3.r) + prev->g * (t1.r - t3.r) + 0x80) >> 8);	
-						TEX->g = prev->b + ((prev->r * (t2.g - t3.g) + prev->g * (t1.g - t3.g) + 0x80) >> 8);																		
-					}
-					else
-					{
-						TEX->r = prev->b + ((prev->r * (t1.r - t0.r) + prev->g * (t2.r - t0.r) + 0x80) >> 8);											
-						TEX->g = prev->b + ((prev->r * (t1.g - t0.g) + prev->g * (t2.g - t0.g) + 0x80) >> 8);											
-					}
-				}				
-			}
-			else
-			{
-				invt3r  = ~t3.r; 
-				invt3g = ~t3.g;
 
-				if (!convert)
-				{
+					invt3r  = ~t3.r; 
+					invt3g = ~t3.g;
+
 					
 					TEX->r = t3.r + ((((t1.r + t2.r) << 6) - (t3.r << 7) + ((invt3r + t0.r) << 6) + 0xc0) >> 8);											
 					TEX->g = t3.g + ((((t1.g + t2.g) << 6) - (t3.g << 7) + ((invt3g + t0.g) << 6) + 0xc0) >> 8);
 				}
-				else
-				{
-					TEX->r = prev->b + ((prev->r * (t2.r - t3.r) + prev->g * (t1.r - t3.r) + ((invt3r + t0.r) << 6) + 0xc0) >> 8);											
-					TEX->g = prev->b + ((prev->r * (t2.g - t3.g) + prev->g * (t1.g - t3.g) + ((invt3g + t0.g) << 6) + 0xc0) >> 8);
-				}
-			}
 
-			if (!center)
-			{
-				if (!convert)
+				if (!center)
 				{
 					if (upper)
-					{	
+					{
 						invsf = 0x20 - sfrac;
 
 						TEX->b = t3.b + ((invsf * (t2.b - t3.b) + invtf * (t1.b - t3.b) + 0x10) >> 5);																
 						TEX->a = t3.a + ((invsf * (t2.a - t3.a) + invtf * (t1.a - t3.a) + 0x10) >> 5);
 					}
 					else
-					{											
+					{
 						TEX->b = t0.b + ((sfrac * (t1.b - t0.b) + tfrac * (t2.b - t0.b) + 0x10) >> 5);									
 						TEX->a = t0.a + ((sfrac * (t1.a - t0.a) + tfrac * (t2.a - t0.a) + 0x10) >> 5);
 					}
 				}
 				else
+				{
+					invt3b = ~t3.b; 
+					invt3a = ~t3.a;
+
+					TEX->b = t3.b + ((((t1.b + t2.b) << 6) - (t3.b << 7) + ((invt3b + t0.b) << 6) + 0xc0) >> 8);									
+					TEX->a = t3.a + ((((t1.a + t2.a) << 6) - (t3.a << 7) + ((invt3a + t0.a) << 6) + 0xc0) >> 8);
+				}
+			}
+			else
+			{
+				if (!centerrg)
+				{
+					if (upperrg)
+					{
+						TEX->r = prev->b + ((prev->r * (t2.r - t3.r) + prev->g * (t1.r - t3.r) + 0x80) >> 8);	
+						TEX->g = prev->b + ((prev->r * (t2.g - t3.g) + prev->g * (t1.g - t3.g) + 0x80) >> 8);
+					}
+					else
+					{
+						TEX->r = prev->b + ((prev->r * (t1.r - t0.r) + prev->g * (t2.r - t0.r) + 0x80) >> 8);											
+						TEX->g = prev->b + ((prev->r * (t1.g - t0.g) + prev->g * (t2.g - t0.g) + 0x80) >> 8);	
+					}
+				}
+				else
+				{
+					invt3r = ~t3.r; 
+					invt3g = ~t3.g;
+
+					TEX->r = prev->b + ((prev->r * (t2.r - t3.r) + prev->g * (t1.r - t3.r) + ((invt3r + t0.r) << 6) + 0xc0) >> 8);											
+					TEX->g = prev->b + ((prev->r * (t2.g - t3.g) + prev->g * (t1.g - t3.g) + ((invt3g + t0.g) << 6) + 0xc0) >> 8);
+				}
+
+				if (!center)
 				{
 					if (upper)
 					{
@@ -5021,23 +5001,15 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 						TEX->a = prev->b + ((prev->r * (t1.a - t0.a) + prev->g * (t2.a - t0.a) + 0x80) >> 8);
 					}
 				}
-			}
-			else
-			{
-				invt3b = ~t3.b; 
-				invt3a = ~t3.a;
-
-				if (!convert)
-				{
-					TEX->b = t3.b + ((((t1.b + t2.b) << 6) - (t3.b << 7) + ((invt3b + t0.b) << 6) + 0xc0) >> 8);									
-					TEX->a = t3.a + ((((t1.a + t2.a) << 6) - (t3.a << 7) + ((invt3a + t0.a) << 6) + 0xc0) >> 8);
-				}
 				else
 				{
+					invt3b = ~t3.b; 
+					invt3a = ~t3.a;
+
 					TEX->b = prev->b + ((prev->r * (t2.b - t3.b) + prev->g * (t1.b - t3.b) + ((invt3b + t0.b) << 6) + 0xc0) >> 8);									
 					TEX->a = prev->b + ((prev->r * (t2.a - t3.a) + prev->g * (t1.a - t3.a) + ((invt3a + t0.a) << 6) + 0xc0) >> 8);
 				}
-			}			
+			}
 		}
 		else
 		{
@@ -5098,8 +5070,11 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 		tcclamp_cycle_light(&sss1, &sst1, maxs, maxt, tilenum);
 		
         tcmask(&sss1, &sst1, tilenum);	
+
+		
+		
 																										
-			
+		
 		fetch_texel(&t0, sss1, sst1, tilenum);
 
 		if (bilerp)
@@ -5372,7 +5347,9 @@ void render_spans_1cycle_complete(int start, int end, int tilenum, int flip)
 
 			rgbaz_correct_clip(offx, offy, sr, sg, sb, sa, &sz, curpixel_cvg);
 
-			get_dither_noise_ptr(x, i, &cdith, &adith);
+			if (other_modes.f.getditherlevel < 2)
+				get_dither_noise(x, i, &cdith, &adith);
+
 			combiner_1cycle(adith, &curpixel_cvg);
 				
 			fbread1_ptr(curpixel, &curpixel_memcvg);
@@ -5528,6 +5505,7 @@ void render_spans_1cycle_notexel1(int start, int end, int tilenum, int flip)
 			sw = w >> 16;
 			sz = (z >> 10) & 0x3fffff;
 			
+			
 
 			sigs.endspan = (j == length);
 			sigs.preendspan = (j == (length - 1));
@@ -5542,7 +5520,9 @@ void render_spans_1cycle_notexel1(int start, int end, int tilenum, int flip)
 
 			rgbaz_correct_clip(offx, offy, sr, sg, sb, sa, &sz, curpixel_cvg);
 
-			get_dither_noise_ptr(x, i, &cdith, &adith);
+			if (other_modes.f.getditherlevel < 2)
+				get_dither_noise(x, i, &cdith, &adith);
+
 			combiner_1cycle(adith, &curpixel_cvg);
 
 			
@@ -5684,7 +5664,9 @@ void render_spans_1cycle_notex(int start, int end, int tilenum, int flip)
 
 			rgbaz_correct_clip(offx, offy, sr, sg, sb, sa, &sz, curpixel_cvg);
 
-			get_dither_noise_ptr(x, i, &cdith, &adith);
+			if (other_modes.f.getditherlevel < 2)
+				get_dither_noise(x, i, &cdith, &adith);
+
 			combiner_1cycle(adith, &curpixel_cvg);
 				
 			fbread1_ptr(curpixel, &curpixel_memcvg);
@@ -5885,7 +5867,9 @@ void render_spans_2cycle_complete(int start, int end, int tilenum, int flip)
 
 			rgbaz_correct_clip(offx, offy, sr, sg, sb, sa, &sz, curpixel_cvg);
 					
-			get_dither_noise_ptr(x, i, &cdith, &adith);
+			if (other_modes.f.getditherlevel < 2)
+				get_dither_noise(x, i, &cdith, &adith);
+
 			combiner_2cycle(adith, &curpixel_cvg, &acalpha);
 				
 			fbread2_ptr(curpixel, &curpixel_memcvg);
@@ -6059,7 +6043,9 @@ void render_spans_2cycle_notexelnext(int start, int end, int tilenum, int flip)
 
 			rgbaz_correct_clip(offx, offy, sr, sg, sb, sa, &sz, curpixel_cvg);
 					
-			get_dither_noise_ptr(x, i, &cdith, &adith);
+			if (other_modes.f.getditherlevel < 2)
+				get_dither_noise(x, i, &cdith, &adith);
+
 			combiner_2cycle(adith, &curpixel_cvg, &acalpha);
 			
 			fbread2_ptr(curpixel, &curpixel_memcvg);
@@ -6228,7 +6214,9 @@ void render_spans_2cycle_notexel1(int start, int end, int tilenum, int flip)
 
 			rgbaz_correct_clip(offx, offy, sr, sg, sb, sa, &sz, curpixel_cvg);
 					
-			get_dither_noise_ptr(x, i, &cdith, &adith);
+			if (other_modes.f.getditherlevel < 2)
+				get_dither_noise(x, i, &cdith, &adith);
+
 			combiner_2cycle(adith, &curpixel_cvg, &acalpha);
 				
 			fbread2_ptr(curpixel, &curpixel_memcvg);
@@ -6368,7 +6356,9 @@ void render_spans_2cycle_notex(int start, int end, int tilenum, int flip)
 
 			rgbaz_correct_clip(offx, offy, sr, sg, sb, sa, &sz, curpixel_cvg);
 					
-			get_dither_noise_ptr(x, i, &cdith, &adith);
+			if (other_modes.f.getditherlevel < 2)
+				get_dither_noise(x, i, &cdith, &adith);
+
 			combiner_2cycle(adith, &curpixel_cvg, &acalpha);
 				
 			fbread2_ptr(curpixel, &curpixel_memcvg);
@@ -6449,7 +6439,23 @@ void render_spans_fill(int start, int end, int flip)
 			
 			for (j = 0; j <= length; j++)
 			{
-				fbfill_ptr(curpixel);
+				
+				switch(fb_size)
+				{
+				case 0:
+					fbfill_4(curpixel);
+					break;
+				case 1:
+					fbfill_8(curpixel);
+					break;
+				case 2:
+					fbfill_16(curpixel);
+					break;
+				case 3:
+				default:
+					fbfill_32(curpixel);
+					break;
+				}
 				
 				x += xinc;
 				curpixel += xinc;
@@ -7337,8 +7343,23 @@ static void edgewalker_for_prims(INT32* ewdata)
 
 	switch(other_modes.cycle_type)
 	{
-		case CYCLE_TYPE_1: render_spans_1cycle_ptr(yhlimit >> 2, yllimit >> 2, tilenum, flip); break;
-		case CYCLE_TYPE_2: render_spans_2cycle_ptr(yhlimit >> 2, yllimit >> 2, tilenum, flip); break;
+		case CYCLE_TYPE_1:
+			switch (other_modes.f.textureuselevel0)
+			{
+				case 0: render_spans_1cycle_complete(yhlimit >> 2, yllimit >> 2, tilenum, flip); break;
+				case 1: render_spans_1cycle_notexel1(yhlimit >> 2, yllimit >> 2, tilenum, flip); break;
+				case 2: default: render_spans_1cycle_notex(yhlimit >> 2, yllimit >> 2, tilenum, flip); break;
+			}
+			break;
+		case CYCLE_TYPE_2: 
+			switch (other_modes.f.textureuselevel1)
+			{
+				case 0: render_spans_2cycle_complete(yhlimit >> 2, yllimit >> 2, tilenum, flip); break;
+				case 1: render_spans_2cycle_notexelnext(yhlimit >> 2, yllimit >> 2, tilenum, flip); break;
+				case 2: render_spans_2cycle_notexel1(yhlimit >> 2, yllimit >> 2, tilenum, flip); break;
+				case 3: default: render_spans_2cycle_notex(yhlimit >> 2, yllimit >> 2, tilenum, flip); break;
+			}
+			break;
 		case CYCLE_TYPE_COPY: render_spans_copy(yhlimit >> 2, yllimit >> 2, tilenum, flip); break;
 		case CYCLE_TYPE_FILL: render_spans_fill(yhlimit >> 2, yllimit >> 2, flip); break;
 		default: fatalerror("cycle_type %d", other_modes.cycle_type); break;
@@ -8274,24 +8295,21 @@ static void rdp_set_other_modes(UINT32 w1, UINT32 w2)
 
 void deduce_derivatives()
 {
+	int special_bsel0, special_bsel1;
+
 	
 	other_modes.f.partialreject_1cycle = (blender2b_a[0] == &inv_pixel_color.a && blender1b_a[0] == &pixel_color.a);
 	other_modes.f.partialreject_2cycle = (blender2b_a[1] == &inv_pixel_color.a && blender1b_a[1] == &pixel_color.a);
 
 	
-	other_modes.f.special_bsel0 = (blender2b_a[0] == &memory_color.a);
-	other_modes.f.special_bsel1 = (blender2b_a[1] == &memory_color.a);
+	special_bsel0 = (blender2b_a[0] == &memory_color.a);
+	special_bsel1 = (blender2b_a[1] == &memory_color.a);
 
 	
-	other_modes.f.realblendershiftersneeded = (other_modes.f.special_bsel0 && other_modes.cycle_type == CYCLE_TYPE_1) || (other_modes.f.special_bsel1 && other_modes.cycle_type == CYCLE_TYPE_2);
-	other_modes.f.interpixelblendershiftersneeded = (other_modes.f.special_bsel0 && other_modes.cycle_type == CYCLE_TYPE_2);
+	other_modes.f.realblendershiftersneeded = (special_bsel0 && other_modes.cycle_type == CYCLE_TYPE_1) || (special_bsel1 && other_modes.cycle_type == CYCLE_TYPE_2);
+	other_modes.f.interpixelblendershiftersneeded = (special_bsel0 && other_modes.cycle_type == CYCLE_TYPE_2);
 
 	other_modes.f.rgb_alpha_dither = (other_modes.rgb_dither_sel << 2) | other_modes.alpha_dither_sel;
-
-	if (other_modes.rgb_dither_sel == 3)
-		rgb_dither_ptr = rgb_dither_func[1];
-	else
-		rgb_dither_ptr = rgb_dither_func[0];
 
 	tcdiv_ptr = tcdiv_func[other_modes.persp_tex_en];
 
@@ -8326,20 +8344,20 @@ void deduce_derivatives()
 
 	
 	if (texel1_used_in_cc1)
-		render_spans_1cycle_ptr = render_spans_1cycle_func[2];
+		other_modes.f.textureuselevel0 = 0;
 	else if (texel0_used_in_cc1 || lod_frac_used_in_cc1)
-		render_spans_1cycle_ptr = render_spans_1cycle_func[1];
+		other_modes.f.textureuselevel0 = 1;
 	else
-		render_spans_1cycle_ptr = render_spans_1cycle_func[0];
+		other_modes.f.textureuselevel0 = 2;
 
 	if (texel1_used_in_cc1)
-		render_spans_2cycle_ptr = render_spans_2cycle_func[3];
+		other_modes.f.textureuselevel1 = 0;
 	else if (texel1_used_in_cc0 || texel0_used_in_cc1)
-		render_spans_2cycle_ptr = render_spans_2cycle_func[2];
+		other_modes.f.textureuselevel1 = 1;
 	else if (texel0_used_in_cc0 || lod_frac_used_in_cc0 || lod_frac_used_in_cc1)
-		render_spans_2cycle_ptr = render_spans_2cycle_func[1];
+		other_modes.f.textureuselevel1 = 2;
 	else
-		render_spans_2cycle_ptr = render_spans_2cycle_func[0];
+		other_modes.f.textureuselevel1 = 3;
 
 	
 	int lodfracused = 0;
@@ -8351,11 +8369,11 @@ void deduce_derivatives()
 	if ((other_modes.cycle_type == CYCLE_TYPE_1 && combiner_rgbsub_a_r[1] == &noise) || \
 		(other_modes.cycle_type == CYCLE_TYPE_2 && (combiner_rgbsub_a_r[0] == &noise || combiner_rgbsub_a_r[1] == &noise)) || \
 		other_modes.alpha_dither_sel == 2)
-		get_dither_noise_ptr = get_dither_noise_func[0];
+		other_modes.f.getditherlevel = 0;
 	else if (other_modes.f.rgb_alpha_dither != 0xf)
-		get_dither_noise_ptr = get_dither_noise_func[1];
+		other_modes.f.getditherlevel = 1;
 	else
-		get_dither_noise_ptr = get_dither_noise_func[2];
+		other_modes.f.getditherlevel = 2;
 
 	other_modes.f.dolod = other_modes.tex_lod_en || lodfracused;
 }
@@ -8614,7 +8632,6 @@ static void rdp_set_color_image(UINT32 w1, UINT32 w2)
 	fbread1_ptr = fbread_func[fb_size];
 	fbread2_ptr = fbread2_func[fb_size];
 	fbwrite_ptr = fbwrite_func[fb_size];
-	fbfill_ptr = fbfill_func[fb_size];
 }
 
 
@@ -8829,7 +8846,7 @@ STRICTINLINE void blender_equation_cycle0(int* r, int* g, int* b)
     
 	
 	
-	if (other_modes.f.special_bsel0)
+	if (blender2b_a[0] == &memory_color.a)
 	{
 		blend1a = (blend1a >> blshifta) & 0x3C;
 		blend2a = (blend2a >> blshiftb) | 3;
@@ -8861,7 +8878,7 @@ STRICTINLINE void blender_equation_cycle0(int* r, int* g, int* b)
 		*r = (blr >> 5) & 0xff;	
 		*g = (blg >> 5) & 0xff; 
 		*b = (blb >> 5) & 0xff;
-	}	
+	}
 }
 
 STRICTINLINE void blender_equation_cycle0_2(int* r, int* g, int* b)
@@ -8870,7 +8887,7 @@ STRICTINLINE void blender_equation_cycle0_2(int* r, int* g, int* b)
 	blend1a = *blender1b_a[0] >> 3;
 	blend2a = *blender2b_a[0] >> 3;
 
-	if (other_modes.f.special_bsel0)
+	if (blender2b_a[0] == &memory_color.a)
 	{
 		blend1a = (blend1a >> pastblshifta) & 0x3C;
 		blend2a = (blend2a >> pastblshiftb) | 3;
@@ -8890,7 +8907,7 @@ STRICTINLINE void blender_equation_cycle1(int* r, int* g, int* b)
 	blend2a = *blender2b_a[1] >> 3;
 
 	int mulb;
-	if (other_modes.f.special_bsel1)
+	if (blender2b_a[1] == &memory_color.a)
 	{
 		blend1a = (blend1a >> blshifta) & 0x3C;
 		blend2a = (blend2a >> blshiftb) | 3;
@@ -9059,6 +9076,40 @@ STRICTINLINE void compute_cvg_noflip(INT32 scanline)
 			}
 		}
 	}
+}
+
+
+
+
+STRICTINLINE INT32 chroma_key_min(COLOR* col)
+{
+	INT32 redkey, greenkey, bluekey, keyalpha;
+
+	
+	
+	
+	redkey = SIGN(col->r, 17);
+	if (redkey > 0)
+		redkey = ((redkey & 0xf) == 8) ? (-redkey + 0x10) : (-redkey);
+	
+	redkey = (key_width.r << 4) + redkey;
+
+	greenkey = SIGN(col->g, 17);
+	if (greenkey > 0)
+		greenkey = ((greenkey & 0xf) == 8) ? (-greenkey + 0x10) : (-greenkey);
+
+	greenkey = (key_width.g << 4) + greenkey;
+
+	bluekey = SIGN(col->b, 17);
+	if (bluekey > 0)
+		bluekey = ((bluekey & 0xf) == 8) ? (-bluekey + 0x10) : (-bluekey);		
+	
+	bluekey = (key_width.b << 4) + bluekey;
+
+	keyalpha = (redkey < greenkey) ? redkey : greenkey;
+	keyalpha = (bluekey < keyalpha) ? bluekey : keyalpha;
+	keyalpha = CLIP(keyalpha, 0, 0xff);
+	return keyalpha;
 }
 
 int rdp_close()
@@ -9294,7 +9345,7 @@ INLINE void fbread_32(UINT32 curpixel, UINT32* curpixel_memcvg)
 	if (other_modes.image_read_en)
 	{
 		*curpixel_memcvg = (mem >> 5) & 7;
-		memory_color.a = (mem) & 0xe0;
+		memory_color.a = mem & 0xe0;
 	}
 	else
 	{
@@ -9313,7 +9364,7 @@ INLINE void fbread2_32(UINT32 curpixel, UINT32* curpixel_memcvg)
 	if (other_modes.image_read_en)
 	{
 		*curpixel_memcvg = (mem >> 5) & 7;
-		pre_memory_color.a = (mem) & 0xe0;
+		pre_memory_color.a = mem & 0xe0;
 	}
 	else
 	{
@@ -9785,7 +9836,7 @@ STRICTINLINE INT32 normalize_dzpix(INT32 sum)
 	return 0;
 }
 
-STRICTINLINE INT32 CLIP(INT32 value,INT32 min,INT32 max)
+STRICTINLINE INT32 CLIP(INT32 value, INT32 min, INT32 max)
 {
 	if (value < min)
 		return min;
@@ -10348,9 +10399,10 @@ INLINE void calculate_tile_derivs(UINT32 i)
 	}
 }
 
-INLINE void rgb_dither_complete(int* r, int* g, int* b, int dith)
+STRICTINLINE void rgb_dither(int* r, int* g, int* b, int dith)
 {
-
+	
+	
 	INT32 newr = *r, newg = *g, newb = *b;
 	INT32 rcomp, gcomp, bcomp;
 
@@ -10393,19 +10445,17 @@ INLINE void rgb_dither_complete(int* r, int* g, int* b, int dith)
 	replacesign = (bcomp - (*b & 7)) >> 31;
 	ditherdiff = newb - *b;
 	*b = *b + (ditherdiff & replacesign);
-	
-}
-
-INLINE void rgb_dither_nothing(int* r, int* g, int* b, int dith)
-{
 }
 
 
-INLINE void get_dither_noise_complete(int x, int y, int* cdith, int* adith)
+STRICTINLINE void get_dither_noise(int x, int y, int* cdith, int* adith)
 {
 
 	
-	noise = ((irand() & 7) << 6) | 0x20;
+	
+	if (!other_modes.f.getditherlevel)
+		noise = ((irand() & 7) << 6) | 0x20;
+
 	
 	
 	int dithindex; 
@@ -10486,93 +10536,6 @@ INLINE void get_dither_noise_complete(int x, int y, int* cdith, int* adith)
 		*adith = 0;
 		break;
 	}
-}
-
-
-INLINE void get_dither_only(int x, int y, int* cdith, int* adith)
-{
-	int dithindex; 
-	switch(other_modes.f.rgb_alpha_dither)
-	{
-	case 0:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*adith = *cdith = magic_matrix[dithindex];
-		break;
-	case 1:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*cdith = magic_matrix[dithindex];
-		*adith = (~(*cdith)) & 7;
-		break;
-	case 2:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*cdith = magic_matrix[dithindex];
-		*adith = (noise >> 6) & 7;
-		break;
-	case 3:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*cdith = magic_matrix[dithindex];
-		*adith = 0;
-		break;
-	case 4:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*adith = *cdith = bayer_matrix[dithindex];
-		break;
-	case 5:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*cdith = bayer_matrix[dithindex];
-		*adith = (~(*cdith)) & 7;
-		break;
-	case 6:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*cdith = bayer_matrix[dithindex];
-		*adith = (noise >> 6) & 7;
-		break;
-	case 7:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*cdith = bayer_matrix[dithindex];
-		*adith = 0;
-		break;
-	case 8:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*cdith = irand();
-		*adith = magic_matrix[dithindex];
-		break;
-	case 9:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*cdith = irand();
-		*adith = (~magic_matrix[dithindex]) & 7;
-		break;
-	case 10:
-		*cdith = irand();
-		*adith = (noise >> 6) & 7;
-		break;
-	case 11:
-		*cdith = irand();
-		*adith = 0;
-		break;
-	case 12:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*cdith = 7;
-		*adith = bayer_matrix[dithindex];
-		break;
-	case 13:
-		dithindex = ((y & 3) << 2) | (x & 3);
-		*cdith = 7;
-		*adith = (~bayer_matrix[dithindex]) & 7;
-		break;
-	case 14:
-		*cdith = 7;
-		*adith = (noise >> 6) & 7;
-		break;
-	case 15:
-		*cdith = 7;
-		*adith = 0;
-		break;
-	}
-}
-
-INLINE void get_dither_nothing(int x, int y, int* cdith, int* adith)
-{
 }
 
 STRICTINLINE void vi_vl_lerp(CCVG* up, CCVG down, UINT32 frac)
@@ -10717,24 +10680,23 @@ INLINE void clearfb16(UINT16* fb, UINT32 width,UINT32 height)
 	}
 }
 
-
 INLINE void tcdiv_nopersp(INT32 ss, INT32 st, INT32 sw, INT32* sss, INT32* sst)
 {
-
-
-
+	
+	
+	
 	*sss = (SIGN16(ss)) & 0x1ffff;
 	*sst = (SIGN16(st)) & 0x1ffff;
 }
 
 INLINE void tcdiv_persp(INT32 ss, INT32 st, INT32 sw, INT32* sss, INT32* sst)
 {
-
-
+	
+	
 	int w_carry = 0;
 	int shift; 
 	int tlu_rcp;
-    int sprod, tprod;
+	int sprod, tprod;
 	int outofbounds_s, outofbounds_t;
 	int tempmask;
 	int shift_value;
