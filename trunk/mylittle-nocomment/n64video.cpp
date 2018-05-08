@@ -2421,7 +2421,6 @@ INLINE void precalculate_everything(void)
 			}
 		}
 	}
-
 }
 
 INLINE void SET_BLENDER_INPUT(int cycle, int which, INT32 **input_r, INT32 **input_g, INT32 **input_b, INT32 **input_a, int a, int b)
@@ -2491,6 +2490,7 @@ INLINE void SET_BLENDER_INPUT(int cycle, int which, INT32 **input_r, INT32 **inp
 
 
 
+
 static const UINT8 bayer_matrix[16] =
 {
 	 0,  4,  1, 5,
@@ -2550,6 +2550,9 @@ STRICTINLINE int blender_1cycle(UINT32* fr, UINT32* fg, UINT32* fb, int dith, UI
 				g = *blender2a_g[0];
 				b = *blender2a_b[0];
 			}
+
+			
+			
 
 			if (other_modes.rgb_dither_sel != 3)
 				rgb_dither(&r, &g, &b, dith);
@@ -4874,16 +4877,6 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 		
 
 		
-		if (!other_modes.sample_type)
-			fetch_texel_entlut_quadro_nearest(&t0, &t1, &t2, &t3, sss1, sst1, tilenum, upper, upperrg);
-		else if (other_modes.en_tlut)
-			fetch_texel_entlut_quadro(&t0, &t1, &t2, &t3, sss1, sdiff, sst1, tdiff, tilenum, upper, upperrg);
-		else
-			fetch_texel_quadro(&t0, &t1, &t2, &t3, sss1, sdiff, sst1, tdiff, tilenum, upper - upperrg);
-
-		
-
-		
 		
 		
 
@@ -4898,6 +4891,14 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 		
 		if (bilerp)
 		{
+			
+			if (!other_modes.sample_type)
+				fetch_texel_entlut_quadro_nearest(&t0, &t1, &t2, &t3, sss1, sst1, tilenum, upper, upperrg);
+			else if (other_modes.en_tlut)
+				fetch_texel_entlut_quadro(&t0, &t1, &t2, &t3, sss1, sdiff, sst1, tdiff, tilenum, upper, upperrg);
+			else
+				fetch_texel_quadro(&t0, &t1, &t2, &t3, sss1, sdiff, sst1, tdiff, tilenum, upper - upperrg);
+
 			if (!other_modes.mid_texel)
 				center = centerrg = 0;
 			else
@@ -5013,9 +5014,20 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 		}
 		else
 		{
+		
+		
 
 			if (convert)
 				t0 = t3 = *prev;
+			else
+			{
+				if (!other_modes.sample_type)
+					fetch_texel_entlut_quadro_nearest(&t0, &t1, &t2, &t3, sss1, sst1, tilenum, upper, upperrg);
+				else if (other_modes.en_tlut)
+					fetch_texel_entlut_quadro(&t0, &t1, &t2, &t3, sss1, sdiff, sst1, tdiff, tilenum, upper, upperrg);
+				else
+					fetch_texel_quadro(&t0, &t1, &t2, &t3, sss1, sdiff, sst1, tdiff, tilenum, upper - upperrg);
+			}
 
 			
 			if (upperrg)
@@ -5074,13 +5086,13 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 		
 		
 																										
-		
-		fetch_texel(&t0, sss1, sst1, tilenum);
-
 		if (bilerp)
 		{
 			if (!convert)
 			{
+				
+				fetch_texel(&t0, sss1, sst1, tilenum);
+
 				TEX->r = t0.r & 0x1ff;
 				TEX->g = t0.g & 0x1ff;
 				TEX->b = t0.b;
@@ -5093,6 +5105,8 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 		{
 			if (convert)
 				t0 = *prev;
+			else
+				fetch_texel(&t0, sss1, sst1, tilenum);
 
 			TEX->r = t0.b + ((k0_tf * t0.g + 0x80) >> 8);
 			TEX->g = t0.b + ((k1_tf * t0.r + k2_tf * t0.g + 0x80) >> 8);
@@ -5344,6 +5358,7 @@ void render_spans_1cycle_complete(int start, int end, int tilenum, int flip)
 			
 			
 			
+			
 
 			rgbaz_correct_clip(offx, offy, sr, sg, sb, sa, &sz, curpixel_cvg);
 
@@ -5529,8 +5544,14 @@ void render_spans_1cycle_notexel1(int start, int end, int tilenum, int flip)
 			
 				
 			fbread1_ptr(curpixel, &curpixel_memcvg);
+
+			
+			
+
 			if (z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg))
 			{
+				
+				
 				if (blender_1cycle(&fir, &fig, &fib, cdith, blend_en, prewrap, curpixel_cvg, curpixel_cvbit))
 				{
 					fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg);
@@ -7337,6 +7358,9 @@ static void edgewalker_for_prims(INT32* ewdata)
 
 	}
 	}
+
+	
+	
 
 	
 	
@@ -9272,6 +9296,24 @@ INLINE void fbread_16(UINT32 curpixel, UINT32* curpixel_memcvg)
 	}
 	else
 	{
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+
 		RREADIDX16(fword, addr);
 
 		if (fb_format == FORMAT_RGBA)
@@ -9342,6 +9384,10 @@ INLINE void fbread_32(UINT32 curpixel, UINT32* curpixel_memcvg)
 	memory_color.r = (mem >> 24) & 0xff;
 	memory_color.g = (mem >> 16) & 0xff;
 	memory_color.b = (mem >> 8) & 0xff;
+
+	
+	
+
 	if (other_modes.image_read_en)
 	{
 		*curpixel_memcvg = (mem >> 5) & 7;
@@ -9361,6 +9407,7 @@ INLINE void fbread2_32(UINT32 curpixel, UINT32* curpixel_memcvg)
 	pre_memory_color.r = (mem >> 24) & 0xff;
 	pre_memory_color.g = (mem >> 16) & 0xff;
 	pre_memory_color.b = (mem >> 8) & 0xff;
+
 	if (other_modes.image_read_en)
 	{
 		*curpixel_memcvg = (mem >> 5) & 7;
@@ -9596,6 +9643,7 @@ STRICTINLINE void z_store(UINT32 zcurpixel, UINT32 z, int dzpixenc)
 {
 	UINT16 zval = z_com_table[z & 0x3ffff]|(dzpixenc >> 2);
 	UINT8 hval = dzpixenc & 3;
+
 	PAIRWRITE16(zcurpixel, zval, hval);
 }
 
@@ -9830,7 +9878,7 @@ STRICTINLINE INT32 normalize_dzpix(INT32 sum)
 	for(int count = 0x2000; count > 0; count >>= 1)
     {
 		if (sum & count)
-			return(count << 1);
+			return (count << 1);
     }
 	fatalerror("normalize_dzpix: invalid codepath taken");
 	return 0;
@@ -10455,6 +10503,8 @@ STRICTINLINE void get_dither_noise(int x, int y, int* cdith, int* adith)
 	
 	if (!other_modes.f.getditherlevel)
 		noise = ((irand() & 7) << 6) | 0x20;
+
+	y >>= scfield;
 
 	
 	
