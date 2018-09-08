@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="7.10"
-	Name="mylittle"
+	Name="angrylion-rdp"
 	ProjectGUID="{D86C6E84-3371-4B20-8620-A703FF3F2CC5}"
 	Keyword="Win32Proj">
 	<Platforms>
@@ -32,12 +32,12 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="ddraw.lib dxguid.lib"
-				OutputFile="$(OutDir)/mylittle.dll"
+				OutputFile="$(OutDir)/angrylion-rdp.dll"
 				LinkIncremental="2"
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile="$(OutDir)/mylittle.pdb"
+				ProgramDatabaseFile="$(OutDir)/angrylion-rdp.pdb"
 				SubSystem="2"
-				ImportLibrary="$(OutDir)/mylittle.lib"
+				ImportLibrary="$(OutDir)/angrylion-rdp.lib"
 				TargetMachine="1"/>
 			<Tool
 				Name="VCMIDLTool"/>
@@ -92,7 +92,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="ddraw.lib dxguid.lib"
-				OutputFile="$(OutDir)/mylittle.dll"
+				OutputFile="$(OutDir)/angrylion-rdp.dll"
 				LinkIncremental="1"
 				GenerateDebugInformation="TRUE"
 				GenerateMapFile="TRUE"
@@ -101,7 +101,7 @@
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
-				ImportLibrary="$(OutDir)/mylittle.lib"
+				ImportLibrary="$(OutDir)/angrylion-rdp.lib"
 				TargetMachine="1"/>
 			<Tool
 				Name="VCMIDLTool"/>
@@ -132,23 +132,23 @@
 			Name="Source Files"
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm">
 			<File
-				RelativePath="main.cpp">
+				RelativePath="..\..\src\main.cpp">
 			</File>
 			<File
-				RelativePath="n64video.cpp">
+				RelativePath="..\..\src\n64video.cpp">
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc">
 			<File
-				RelativePath="Gfx #1.3.h">
+				RelativePath="..\..\src\gfx_1.3.h">
 			</File>
 			<File
-				RelativePath="tctables.h">
+				RelativePath="..\..\src\tctables.h">
 			</File>
 			<File
-				RelativePath="z64.h">
+				RelativePath="..\..\src\z64.h">
 			</File>
 		</Filter>
 		<Filter
