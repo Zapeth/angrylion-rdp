@@ -1,0 +1,7 @@
+/projects/msvc2015/.vs
+/projects/msvc2015/Debug
+/projects/msvc2015/Release
+*.VC.opendb
+*.VC.db
+*.suo
+*.user

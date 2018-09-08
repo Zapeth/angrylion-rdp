@@ -1,23 +1,21 @@
-Microsoft Visual Studio Solution File, Format Version 8.00
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "angrylion-rdp", "angrylion-rdp.vcproj", "{D86C6E84-3371-4B20-8620-A703FF3F2CC5}"
-	ProjectSection(ProjectDependencies) = postProject
-	EndProjectSection
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "angrylion-rdp", "angrylion-rdp.vcxproj", "{D86C6E84-3371-4B20-8620-A703FF3F2CC5}"
 EndProject
 Global
-	GlobalSection(SolutionConfiguration) = preSolution
-		Debug = Debug
-		Release = Release
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
 	EndGlobalSection
-	GlobalSection(ProjectDependencies) = postSolution
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D86C6E84-3371-4B20-8620-A703FF3F2CC5}.Debug|x86.ActiveCfg = Debug|Win32
+		{D86C6E84-3371-4B20-8620-A703FF3F2CC5}.Debug|x86.Build.0 = Debug|Win32
+		{D86C6E84-3371-4B20-8620-A703FF3F2CC5}.Release|x86.ActiveCfg = Release|Win32
+		{D86C6E84-3371-4B20-8620-A703FF3F2CC5}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
-	GlobalSection(ProjectConfiguration) = postSolution
-		{D86C6E84-3371-4B20-8620-A703FF3F2CC5}.Debug.ActiveCfg = Debug|Win32
-		{D86C6E84-3371-4B20-8620-A703FF3F2CC5}.Debug.Build.0 = Debug|Win32
-		{D86C6E84-3371-4B20-8620-A703FF3F2CC5}.Release.ActiveCfg = Release|Win32
-		{D86C6E84-3371-4B20-8620-A703FF3F2CC5}.Release.Build.0 = Release|Win32
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-	EndGlobalSection
-	GlobalSection(ExtensibilityAddIns) = postSolution
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal
