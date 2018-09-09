@@ -1,10 +1,6 @@
 #ifndef __Z64_H__
 #define __Z64_H__
 
-#if defined (_MSC_VER) && (_MSC_VER >= 1500)
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include <stdio.h>
 
 #ifdef WIN32

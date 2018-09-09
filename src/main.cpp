@@ -1,9 +1,9 @@
 #include "z64.h"
 #include "gfx_1.3.h"
 
-extern const int screen_width = 1024, screen_height = 768;
+const int screen_width = 1024, screen_height = 768;
 
-LPDIRECTDRAW7 lpdd = 0;
+LPDIRECTDRAW7 lpdd = NULL;
 LPDIRECTDRAWSURFACE7 lpddsprimary;
 LPDIRECTDRAWSURFACE7 lpddsback;
 DDSURFACEDESC2 ddsd;
@@ -11,7 +11,6 @@ HRESULT res;
 RECT dst, src;
 INT32 pitchindwords;
 
-FILE* zeldainfo = 0;
 int ProcessDListShown = 0;
 extern int SaveLoaded;
 extern UINT32 command_counter;
@@ -63,7 +62,7 @@ EXPORT void CALL GetDllInfo(PLUGIN_INFO * PluginInfo)
 {
 	PluginInfo->Version = 0x0103;
 	PluginInfo->Type  = PLUGIN_TYPE_GFX;
-	sprintf (PluginInfo->Name, "My little plugin");
+	snprintf(PluginInfo->Name, sizeof(PluginInfo->Name), "My little plugin");
 
 	PluginInfo->NormalMemory = TRUE;
 	PluginInfo->MemoryBswaped = TRUE;
@@ -100,7 +99,6 @@ EXPORT void CALL ProcessDList(void)
 EXPORT void CALL ProcessRDPList(void)
 {
 	rdp_process_list();
-	return;
 }
 
 EXPORT void CALL RomClosed(void)
@@ -109,17 +107,17 @@ EXPORT void CALL RomClosed(void)
 	if (lpddsback)
 	{
 		IDirectDrawSurface_Release(lpddsback);
-		lpddsback = 0;
+		lpddsback = NULL;
 	}
 	if (lpddsprimary)
 	{
 		IDirectDrawSurface_Release(lpddsprimary);
-		lpddsprimary = 0;
+		lpddsprimary = NULL;
 	}
 	if (lpdd)
 	{
 		IDirectDraw_Release(lpdd);
-		lpdd = 0;
+		lpdd = NULL;
 	}
 
 	SaveLoaded = 1;
@@ -144,7 +142,7 @@ EXPORT void CALL RomOpen(void)
 	DDPIXELFORMAT ftpixel;
 	LPDIRECTDRAWCLIPPER lpddcl;
 
-	res = DirectDrawCreateEx(0, (LPVOID*)&lpdd, IID_IDirectDraw7, 0);
+	res = DirectDrawCreateEx(NULL, (LPVOID*)&lpdd, IID_IDirectDraw7, NULL);
 	if(res != DD_OK)
 		fatalerror("Couldn't create a DirectDraw object");
 	res = IDirectDraw_SetCooperativeLevel(lpdd, gfx.hWnd, DDSCL_NORMAL);
@@ -156,7 +154,7 @@ EXPORT void CALL RomOpen(void)
 	ddsd.dwFlags = DDSD_CAPS;
 	ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
 
-	res = IDirectDraw_CreateSurface(lpdd, &ddsd, &lpddsprimary, 0);
+	res = IDirectDraw_CreateSurface(lpdd, &ddsd, &lpddsprimary, NULL);
 	if(res != DD_OK)
 		fatalerror("CreateSurface for a primary surface failed. Error code %x", res);
 
@@ -172,7 +170,7 @@ EXPORT void CALL RomOpen(void)
 	ftpixel.dwGBitMask = 0xff00;
 	ftpixel.dwBBitMask = 0xff;
 	ddsd.ddpfPixelFormat = ftpixel;
-	res = IDirectDraw_CreateSurface(lpdd, &ddsd, &lpddsback, 0);
+	res = IDirectDraw_CreateSurface(lpdd, &ddsd, &lpddsback, NULL);
 	if (res == DDERR_INVALIDPIXELFORMAT)
 		fatalerror("ARGB8888 is not supported. You can try changing desktop color depth to 32-bit, but most likely that won't help.");
 	else if(res != DD_OK)
@@ -185,7 +183,7 @@ EXPORT void CALL RomOpen(void)
 		fatalerror("Pitch of a secondary surface is either not 32 bit aligned or two small.");
 	pitchindwords = ddsd.lPitch >> 2;
 
-	res = IDirectDraw_CreateClipper(lpdd, 0, &lpddcl, 0);
+	res = IDirectDraw_CreateClipper(lpdd, 0, &lpddcl, NULL);
 	if (res != DD_OK)
 		fatalerror("Couldn't create a clipper.");
 	res = IDirectDrawClipper_SetHWnd(lpddcl, 0, gfx.hWnd);
@@ -210,9 +208,9 @@ EXPORT void CALL RomOpen(void)
 	DDBLTFX ddbltfx;
 	ddbltfx.dwSize = sizeof(DDBLTFX);
 	ddbltfx.dwFillColor = 0;
-	res = IDirectDrawSurface_Blt(lpddsprimary, &dst, 0, 0, DDBLT_COLORFILL | DDBLT_WAIT, &ddbltfx);
+	res = IDirectDrawSurface_Blt(lpddsprimary, &dst, NULL, 0, DDBLT_COLORFILL | DDBLT_WAIT, &ddbltfx);
 	src.bottom = PRESCALE_HEIGHT;
-	res = IDirectDrawSurface_Blt(lpddsback, &src, 0, 0, DDBLT_COLORFILL | DDBLT_WAIT, &ddbltfx);
+	res = IDirectDrawSurface_Blt(lpddsback, &src, NULL, 0, DDBLT_COLORFILL | DDBLT_WAIT, &ddbltfx);
 
 	rdp_init();
 }

@@ -1,3 +1,6 @@
+#if defined (_MSC_VER) && (_MSC_VER >= 1500)
+	#define _CRT_SECURE_NO_WARNINGS
+#endif
 
 #include "z64.h"
 #include "gfx_1.3.h"
@@ -25,11 +28,11 @@ INLINE void fatalerror(const char * err, ...)
 	char VsprintfBuffer[2000];
 	va_list arg;
 	va_start(arg, err);
-	vsprintf(VsprintfBuffer, err, arg);
+	vsnprintf(VsprintfBuffer, sizeof(VsprintfBuffer), err, arg);
 #ifdef _WIN32
 	MessageBoxA(0,VsprintfBuffer,"RDP: fatal error",MB_OK);
 #else
-	printf(VsprintfBuffer);
+	fprintf(stderr, VsprintfBuffer);
 #endif
 	va_end(arg);
 	exit(0);
@@ -40,11 +43,11 @@ INLINE void popmessage(const char* err, ...)
 	char VsprintfBuffer[2000];
 	va_list arg;
 	va_start(arg, err);
-	vsprintf(VsprintfBuffer, err, arg);
+	vsnprintf(VsprintfBuffer, sizeof(VsprintfBuffer), err, arg);
 #ifdef _WIN32
 	MessageBoxA(0,VsprintfBuffer,"RDP: warning",MB_OK);
 #else
-	printf(VsprintfBuffer);
+	fprintf(stdout, VsprintfBuffer);
 #endif
 	va_end(arg);
 }
@@ -58,8 +61,6 @@ UINT32 rdp_cmd_data[0x10000];
 UINT32 rdp_cmd_ptr = 0;
 UINT32 rdp_cmd_cur = 0;
 UINT32 ptr_onstart = 0;
-
-extern FILE* zeldainfo;
 
 UINT32 prevvicurrent = 0;
 int emucontrolsvicurrent = -1;
@@ -80,8 +81,7 @@ UINT16* rdram_16;
 UINT32 brightness = 0;
 INT32 iseed = 1;
 
-typedef struct
-{
+typedef struct {
 	int lx, rx;
 	int unscrx;
 	int validline;
@@ -507,14 +507,14 @@ UINT32 DebugMode = 0, DebugMode2 = 0; INT32 DebugMode3 = 0;
 int debugcolor = 0;
 UINT8 hidden_bits[0x400000];
 struct {UINT32 shift; UINT32 add;} z_dec_table[8] = {
-	6, 0x00000,
-	5, 0x20000,
-	4, 0x30000,
-	3, 0x38000,
-	2, 0x3c000,
-	1, 0x3e000,
-	0, 0x3f000,
-	0, 0x3f800,
+	{ 6, 0x00000 },
+	{ 5, 0x20000 },
+	{ 4, 0x30000 },
+	{ 3, 0x38000 },
+	{ 2, 0x3c000 },
+	{ 1, 0x3e000 },
+	{ 0, 0x3f000 },
+	{ 0, 0x3f800 }
 };
 
 static void (*vi_fetch_filter_func[2])(CCVG*, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) =
@@ -982,7 +982,6 @@ int rdp_init()
 int rdp_update()
 {
 	int i, j;
-	UINT32 final = 0;
 
 	CCVG *viaa_cache, *viaa_cache_next, *divot_cache, *divot_cache_next;
 	CCVG viaa_array[0xa10 << 1];
@@ -1018,7 +1017,7 @@ int rdp_update()
 
 #ifdef _WIN32
 	int slowbright = 0;
-	if (GetAsyncKeyState(0x91))
+	if (GetAsyncKeyState(VK_SCROLL))
 		brightness = (brightness + 1) & 15;
 	slowbright = brightness >> 1;
 #endif
@@ -1137,9 +1136,6 @@ int rdp_update()
 	int prev_scan_x = 0, scan_x = 0, next_scan_x = 0, far_scan_x = 0;
 	int prev_x = 0, cur_x = 0, next_x = 0, far_x = 0;
 
-	UINT32 pix = 0;
-	UINT8 cur_cvg = 0;
-
 	int lerping = 0;
 	UINT32 prevy = 0, nexty = y_start + y_add;
 	CCVG* tempccvgptr;
@@ -1148,7 +1144,7 @@ int rdp_update()
 	divot_cache = &divot_array[0];
 	divot_cache_next = &divot_array[0xa10];
 
-	INT32 *d = 0;
+	INT32 *d = NULL;
 
 	UINT32 prescale_ptr = v_start * linecount + h_start + (lowerfield ? pitchindwords : 0);
 
@@ -1156,24 +1152,17 @@ int rdp_update()
 	int maxhpass =  hres_clamped ? hres : (hres - 7);
 
 	if (!(vitype & 2) && prevwasblank)
-	{
 		return 0;
-	}
 
-	res = IDirectDrawSurface_Lock(lpddsback, 0, &ddsd, DDLOCK_SURFACEMEMORYPTR | DDLOCK_NOSYSLOCK, 0);
-	if (res == DDERR_SURFACELOST)
+	res = IDirectDrawSurface_Lock(lpddsback, NULL, &ddsd, DDLOCK_SURFACEMEMORYPTR | DDLOCK_NOSYSLOCK, NULL);
+	while (res == DDERR_SURFACELOST)
 	{
-		while (1)
-		{
-			res = IDirectDrawSurface_Restore(lpddsback);
-			if (res != DD_OK)
-				fatalerror("Restore failed with DirectDraw error %x", res);
-			res = IDirectDrawSurface_Lock(lpddsback, 0, &ddsd, DDLOCK_SURFACEMEMORYPTR | DDLOCK_NOSYSLOCK, 0);
-			if (res != DDERR_SURFACELOST)
-				break;
-		};
+		res = IDirectDrawSurface_Restore(lpddsback);
+		if (res != DD_OK)
+			fatalerror("Restore failed with DirectDraw error %x", res);
+		res = IDirectDrawSurface_Lock(lpddsback, NULL, &ddsd, DDLOCK_SURFACEMEMORYPTR | DDLOCK_NOSYSLOCK, NULL);
 	}
-	else if (res != DD_OK)
+	if (res != DD_OK)
 		fatalerror("Lock failed with DirectDraw error %x", res);
 
 	PreScale = (INT32*)ddsd.lpSurface;
@@ -1249,10 +1238,12 @@ int rdp_update()
 				{
 					tvfadeoutstate[i + 1]--;
 					if (!tvfadeoutstate[i + 1])
+					{
 						if (validh)
 							memset(&PreScale[(i + 1) * pitchindwords + h_start], 0, hres * sizeof(UINT32));
 						else
 							memset(&PreScale[(i + 1) * pitchindwords], 0, PRESCALE_WIDTH * sizeof(UINT32));
+					}
 				}
 
 				i += 2;
@@ -1263,10 +1254,12 @@ int rdp_update()
 			if (tvfadeoutstate[i])
 				tvfadeoutstate[i]--;
 			if (!tvfadeoutstate[i])
+			{
 				if (validh)
 					memset(&PreScale[i * pitchindwords + h_start], 0, hres * sizeof(UINT32));
 				else
 					memset(&PreScale[i * pitchindwords], 0, PRESCALE_WIDTH * sizeof(UINT32));
+			}
 		}
  	}
 
@@ -1274,9 +1267,7 @@ int rdp_update()
 	{
 		case 0:
 		case 1:
-		{
 			break;
-		}
 
 		case 2:
 		case 3:
@@ -1515,10 +1506,10 @@ int rdp_update()
 			}
 			break;
 		}
-        default:    popmessage("Unknown framebuffer format %d\n", vi_control & 0x3);
+		default:	popmessage("Unknown framebuffer format %d\n", vi_control & 0x3);
 	}
 
-	res = IDirectDrawSurface_Unlock(lpddsback, 0);
+	res = IDirectDrawSurface_Unlock(lpddsback, NULL);
 	if (res != DD_OK && res != DDERR_GENERIC && res != DDERR_SURFACELOST)
 		fatalerror("Couldn't unlock the offscreen surface with DirectDraw error %x", res);
 
@@ -1528,20 +1519,15 @@ int rdp_update()
 
 	if (dst.left < dst.right && dst.top < dst.bottom)
 	{
-		res = IDirectDrawSurface_Blt(lpddsprimary, &dst, lpddsback, &src, DDBLT_WAIT, 0);
-		if (res == DDERR_SURFACELOST)
+		res = IDirectDrawSurface_Blt(lpddsprimary, &dst, lpddsback, &src, DDBLT_WAIT, NULL);
+		while (res == DDERR_SURFACELOST)
 		{
-			while (1)
-			{
-				res = IDirectDraw4_RestoreAllSurfaces(lpdd);
-				if (res != DD_OK)
-					fatalerror("RestoreAllSurfaces failed with DirectDraw error %x", res);
-				res = IDirectDrawSurface_Blt(lpddsprimary, &dst, lpddsback, &src, DDBLT_WAIT, 0);
-				if (res != DDERR_SURFACELOST)
-					break;
-			}
+			res = IDirectDraw4_RestoreAllSurfaces(lpdd);
+			if (res != DD_OK)
+				fatalerror("RestoreAllSurfaces failed with DirectDraw error %x", res);
+			res = IDirectDrawSurface_Blt(lpddsprimary, &dst, lpddsback, &src, DDBLT_WAIT, NULL);
 		}
-		else if (res != DD_OK && res != DDERR_GENERIC && res != DDERR_OUTOFMEMORY)
+		if (res != DD_OK && res != DDERR_GENERIC && res != DDERR_OUTOFMEMORY)
 			fatalerror("Scaled blit failed with DirectDraw error %x", res);
 	}
 
@@ -1628,7 +1614,7 @@ INLINE void SET_SUBA_RGB_INPUT(INT32 **input_r, INT32 **input_g, INT32 **input_b
 		case 3:		*input_r = &prim_color.r;		*input_g = &prim_color.g;		*input_b = &prim_color.b;		break;
 		case 4:		*input_r = &shade_color.r;		*input_g = &shade_color.g;		*input_b = &shade_color.b;		break;
 		case 5:		*input_r = &env_color.r;		*input_g = &env_color.g;		*input_b = &env_color.b;		break;
-		case 6:		*input_r = &one_color;			*input_g = &one_color;			*input_b = &one_color;		break;
+		case 6:		*input_r = &one_color;			*input_g = &one_color;			*input_b = &one_color;			break;
 		case 7:		*input_r = &noise;				*input_g = &noise;				*input_b = &noise;				break;
 		case 8: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
 		{
@@ -1967,7 +1953,7 @@ STRICTINLINE void combiner_2cycle_cycle1(int adseed, UINT32* curpixel_cvg)
 
 INLINE void precalculate_everything(void)
 {
-	int i = 0, k = 0, j = 0;
+	int i = 0, j = 0;
 
 	for (i = 0; i < 256; i++)
 	{
@@ -1993,15 +1979,14 @@ INLINE void precalculate_everything(void)
 
 	precalc_cvmask_derivatives();
 
-	i = 0;
 	log2table[0] = log2table[1] = 0;
 	for (i = 2; i < 256; i++)
 	{
-		for (k = 7; k > 0; k--)
+		for (j = 7; j > 0; j--)
 		{
-			if((i >> k) & 1)
+			if((i >> j) & 1)
 			{
-				log2table[i] = k;
+				log2table[i] = j;
 				break;
 			}
 		}
@@ -2053,9 +2038,9 @@ INLINE void precalculate_everything(void)
 
 	for (i = 0; i < 0x8000; i++)
 	{
-		for (k = 1; k <= 14 && !((i << k) & 0x8000); k++)
+		for (j = 1; j <= 14 && !((i << j) & 0x8000); j++)
 			;
-		shift = k - 1;
+		shift = j - 1;
 		normout = (i << shift) & 0x3fff;
 		wnorm = (normout & 0xff) << 2;
 		normout >>= 8;
@@ -2081,16 +2066,16 @@ INLINE void precalculate_everything(void)
 
 		temp = invd + (n >> 8) + 1;
 		ps[0] = temp & 7;
-		for (k = 0; k < 8; k++)
+		for (j = 0; j < 8; j++)
 		{
-			nbit = (n >> (7 - k)) & 1;
-			if (res & (0x100 >> k))
-				temp = invd + (ps[k] << 1) + nbit + 1;
+			nbit = (n >> (7 - j)) & 1;
+			if (res & (0x100 >> j))
+				temp = invd + (ps[j] << 1) + nbit + 1;
 			else
-				temp = d + (ps[k] << 1) + nbit;
-			ps[k + 1] = temp & 7;
+				temp = d + (ps[j] << 1) + nbit;
+			ps[j + 1] = temp & 7;
 			if (temp & 0x10)
-				res |= (1 << (7 - k));
+				res |= (1 << (7 - j));
 		}
 		bldiv_hwaccurate_table[i] = res;
 	}
@@ -2098,11 +2083,11 @@ INLINE void precalculate_everything(void)
 	deltaz_comparator_lut[0] = 0;
 	for (i = 1; i < 0x10000; i++)
 	{
-		for (k = 15; k >= 0; k--)
+		for (j = 15; j >= 0; j--)
 		{
-			if (i & (1 << k))
+			if (i & (1 << j))
 			{
-				deltaz_comparator_lut[i] = 1 << k;
+				deltaz_comparator_lut[i] = 1 << j;
 				break;
 			}
 		}
@@ -2228,11 +2213,8 @@ STRICTINLINE int blender_1cycle(UINT32* fr, UINT32* fg, UINT32* fb, int dith, UI
 			*fb = b;
 			return 1;
 		}
-		else
-			return 0;
 	}
-	else
-		return 0;
+	return 0;
 }
 
 STRICTINLINE int blender_2cycle_cycle0(UINT32 curpixel_cvg, UINT32 curpixel_cvbit)
@@ -4393,7 +4375,7 @@ void fetch_qword_copy(UINT32* hidword, UINT32* lowdword, INT32 ssss, INT32 ssst,
 
 STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT32 SST, UINT32 tilenum, UINT32 cycle)
 {
-#define TRELATIVE(x, y) 	((x) - ((y) << 3))
+#define TRELATIVE(x, y)		((x) - ((y) << 3))
 
 	INT32 maxs, maxt, invt3r, invt3g, invt3b, invt3a;
 	INT32 sfrac, tfrac, invsf, invtf, sfracrg, invsfrg;
@@ -4623,7 +4605,7 @@ STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT
 	{
 		tcclamp_cycle_light(&sss1, &sst1, maxs, maxt, tilenum);
 
-        tcmask(&sss1, &sst1, tilenum);
+		tcmask(&sss1, &sst1, tilenum);
 
 		if (bilerp)
 		{
@@ -6066,13 +6048,11 @@ void render_spans_fill(int start, int end, int flip)
 	int xinc = flip ? 1 : -1;
 
 	int xstart = 0, xendsc;
-	int prevxstart;
 	int curpixel = 0;
 	int x, length;
 
 	for (i = start; i <= end; i++)
 	{
-		prevxstart = xstart;
 		xstart = span[i].lx;
 		xendsc = span[i].rx;
 
@@ -6161,10 +6141,8 @@ void render_spans_copy(int start, int end, int tilenum, int flip)
 	int xstart = 0, xendsc;
 	int s = 0, t = 0, w = 0, ss = 0, st = 0, sw = 0, sss = 0, sst = 0, ssw = 0;
 	int fb_index, length;
-	int diff = 0;
 
 	UINT32 hidword = 0, lowdword = 0;
-	UINT32 hidword1 = 0, lowdword1 = 0;
 	int fbadvance = (fb_size == PIXEL_SIZE_4BIT) ? 8 : 16 >> fb_size;
 	UINT32 fbptr = 0;
 	int fbptr_advance = flip ? 8 : -8;
@@ -6275,7 +6253,6 @@ void render_spans_copy(int start, int end, int tilenum, int flip)
 
 void loading_pipeline(int start, int end, int tilenum, int coord_quad, int ltlut)
 {
-	int localdebugmode = 0, cnt = 0;
 	int i, j;
 
 	int dsinc, dtinc;
@@ -6318,7 +6295,6 @@ void loading_pipeline(int start, int end, int tilenum, int coord_quad, int ltlut
 	case PIXEL_SIZE_4BIT:
 		rdp_pipeline_crashed = 1;
 		return;
-		break;
 	case PIXEL_SIZE_8BIT:
 		tiadvance = 8;
 		spanadvance = 8;
@@ -6518,7 +6494,6 @@ static void edgewalker_for_prims(INT32* ewdata)
 	int j = 0;
 	int xleft = 0, xright = 0, xleft_inc = 0, xright_inc = 0;
 	int r = 0, g = 0, b = 0, a = 0, z = 0, s = 0, t = 0, w = 0;
-	int dr = 0, dg = 0, db = 0, da = 0;
 	int drdx = 0, dgdx = 0, dbdx = 0, dadx = 0, dzdx = 0, dsdx = 0, dtdx = 0, dwdx = 0;
 	int drdy = 0, dgdy = 0, dbdy = 0, dady = 0, dzdy = 0, dsdy = 0, dtdy = 0, dwdy = 0;
 	int drde = 0, dgde = 0, dbde = 0, dade = 0, dzde = 0, dsde = 0, dtde = 0, dwde = 0;
@@ -6715,10 +6690,9 @@ static void edgewalker_for_prims(INT32* ewdata)
 	INT32 maxxmx, minxmx, maxxhx, minxhx;
 
 	int spix = 0;
-	int ycur =	yh & ~3;
+	int ycur = yh & ~3;
 	int ldflag = (sign_dxhdy ^ flip) ? 0 : 3;
 	int invaly = 1;
-	int length = 0;
 	INT32 xrsc = 0, xlsc = 0, stickybit = 0;
 	INT32 yllimit = 0, yhlimit = 0;
 	if (yl & 0x2000)
@@ -6982,7 +6956,7 @@ static void edgewalker_for_loads(INT32* lewdata)
 	t    = (lewdata[5] & 0xffff) << 16;
 	w    = 0;
 	dsdx = (lewdata[7] & 0xffff0000) | ((lewdata[6] >> 16) & 0xffff);
-	dtdx = ((lewdata[7] << 16) & 0xffff0000)	| (lewdata[6] & 0xffff);
+	dtdx = ((lewdata[7] << 16) & 0xffff0000) | (lewdata[6] & 0xffff);
 	dsde = 0;
 	dtde = (lewdata[9] & 0xffff) << 16;
 	dsdy = 0;
@@ -7507,9 +7481,9 @@ static void rdp_tex_rect(UINT32 w1, UINT32 w2)
 
 	UINT32 tilenum	= (w2 >> 24) & 0x7;
 	UINT32 xl = (w1 >> 12) & 0xfff;
-	UINT32 yl	= (w1 >>  0) & 0xfff;
-	UINT32 xh	= (w2 >> 12) & 0xfff;
-	UINT32 yh	= (w2 >>  0) & 0xfff;
+	UINT32 yl = (w1 >>  0) & 0xfff;
+	UINT32 xh = (w2 >> 12) & 0xfff;
+	UINT32 yh = (w2 >>  0) & 0xfff;
 
 	INT32 s = (w3 >> 16) & 0xffff;
 	INT32 t = (w3 >>  0) & 0xffff;
@@ -7561,11 +7535,11 @@ static void rdp_tex_rect_flip(UINT32 w1, UINT32 w2)
 	UINT32 w3 = rdp_cmd_data[rdp_cmd_cur+2];
 	UINT32 w4 = rdp_cmd_data[rdp_cmd_cur+3];
 
-	UINT32 tilenum	= (w2 >> 24) & 0x7;
+	UINT32 tilenum = (w2 >> 24) & 0x7;
 	UINT32 xl = (w1 >> 12) & 0xfff;
-	UINT32 yl	= (w1 >>  0) & 0xfff;
-	UINT32 xh	= (w2 >> 12) & 0xfff;
-	UINT32 yh	= (w2 >>  0) & 0xfff;
+	UINT32 yl = (w1 >>  0) & 0xfff;
+	UINT32 xh = (w2 >> 12) & 0xfff;
+	UINT32 yh = (w2 >>  0) & 0xfff;
 
 	INT32 s = (w3 >> 16) & 0xffff;
 	INT32 t = (w3 >>  0) & 0xffff;
@@ -9013,7 +8987,6 @@ STRICTINLINE UINT32 z_compare(UINT32 zcurpixel, UINT32 sz, UINT16 dzpix, int dzp
 			nearer = force_coplanar || (diff <= (INT32)oz);
 			max = (oz == 0x3ffff);
 			return (max || (overflow ? infront : nearer));
-			break;
 		case ZMODE_INTERPENETRATING:
 			infront = sz < oz;
 			if (!infront || !farther || !overflow)
@@ -9030,18 +9003,15 @@ STRICTINLINE UINT32 z_compare(UINT32 zcurpixel, UINT32 sz, UINT16 dzpix, int dzp
 				*curpixel_cvg = ((cvgcoeff * (*curpixel_cvg)) >> 3) & 0xf;
 				return 1;
 			}
-			break;
 		case ZMODE_TRANSPARENT:
 			infront = sz < oz;
 			max = (oz == 0x3ffff);
 			return (infront || max);
-			break;
 		case ZMODE_DECAL:
 			diff = (INT32)sz - (INT32)dznew;
 			nearer = force_coplanar || (diff <= (INT32)oz);
 			max = (oz == 0x3ffff);
 			return (farther && nearer && !max);
-			break;
 		}
 		return 0;
 	}
@@ -9503,7 +9473,6 @@ STRICTINLINE void gamma_filters(int* r, int* g, int* b, int gamma_and_dither)
 	switch(gamma_and_dither)
 	{
 	case 0:
-		return;
 		break;
 	case 1:
 		cdith = irand();
@@ -9580,7 +9549,7 @@ STRICTINLINE void video_max_optimized(UINT32* pixels, UINT32* penumin, UINT32* p
 
 	for (i = 1; i < numofels; i++)
 	{
-	    if (pixels[i] > pixels[posmax])
+		if (pixels[i] > pixels[posmax])
 		{
 			curpenmax = pixels[posmax];
 			posmax = i;
@@ -9841,43 +9810,43 @@ int IsBadPtrW32(void *ptr, UINT32 bytes)
 {
 #ifdef _WIN32
 	SIZE_T dwSize;
-    MEMORY_BASIC_INFORMATION meminfo;
-    if (!ptr)
-        return 1;
-    memset(&meminfo, 0x00, sizeof(meminfo));
-    dwSize = VirtualQuery(ptr, &meminfo, sizeof(meminfo));
-    if (!dwSize)
-        return 1;
-    if (MEM_COMMIT != meminfo.State)
-        return 1;
-    if (!(meminfo.Protect & (PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)))
-        return 1;
-    if (bytes > meminfo.RegionSize)
-        return 1;
-    if ((UINT64)((char*)ptr - (char*)meminfo.BaseAddress) > (UINT64)(meminfo.RegionSize - bytes))
-        return 1;
+	MEMORY_BASIC_INFORMATION meminfo;
+	if (!ptr)
+		return 1;
+	memset(&meminfo, 0x00, sizeof(meminfo));
+	dwSize = VirtualQuery(ptr, &meminfo, sizeof(meminfo));
+	if (!dwSize)
+		return 1;
+	if (MEM_COMMIT != meminfo.State)
+		return 1;
+	if (!(meminfo.Protect & (PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)))
+		return 1;
+	if (bytes > meminfo.RegionSize)
+		return 1;
+	if ((UINT64)((char*)ptr - (char*)meminfo.BaseAddress) > (UINT64)(meminfo.RegionSize - bytes))
+		return 1;
 #endif
-    return 0;
+	return 0;
 }
 
 UINT32 vi_integer_sqrt(UINT32 a)
 {
 	unsigned long op = a, res = 0, one = 1 << 30;
 
-    while (one > op)
+	while (one > op)
 		one >>= 2;
 
-    while (one != 0)
+	while (one != 0)
 	{
-        if (op >= res + one)
+		if (op >= res + one)
 		{
-            op -= res + one;
-            res += one << 1;
-        }
-        res >>= 1;
-        one >>= 2;
-    }
-    return res;
+			op -= res + one;
+			res += one << 1;
+		}
+		res >>= 1;
+		one >>= 2;
+	}
+	return res;
 }
 
 INLINE void clearscreen(UINT32 x0, UINT32 y0, UINT32 x1, UINT32 y1, UINT32 white)
@@ -9891,7 +9860,7 @@ INLINE void clearscreen(UINT32 x0, UINT32 y0, UINT32 x1, UINT32 y1, UINT32 white
 	memset(&ddbltfx, 0, sizeof(DDBLTFX));
 	ddbltfx.dwSize = sizeof(DDBLTFX);
 	ddbltfx.dwFillColor = 0;
-	res = IDirectDrawSurface_Blt(lpddsprimary, &bltrect, 0, 0, DDBLT_WAIT | DDBLT_COLORFILL, &ddbltfx);
+	res = IDirectDrawSurface_Blt(lpddsprimary, &bltrect, NULL, 0, DDBLT_WAIT | DDBLT_COLORFILL, &ddbltfx);
 	if (res != DD_OK)
 		fatalerror("clearscreen: Blt failed.");
 }
@@ -10733,16 +10702,16 @@ const char *aAText[] =
 };
 
 	popmessage("Note that the 2nd-cycle equations are used in one-cycle mode.\nCombiner equations are (%s - %s) * %s + %s | (%s - %s) * %s + %s \n (%s - %s) * %s + %s | (%s - %s) * %s + %s",
-		saRGBText[combine.sub_a_rgb0],sbRGBText[combine.sub_b_rgb0],mRGBText[combine.mul_rgb0],
-		aRGBText[combine.add_rgb0],saAText[combine.sub_a_a0],sbAText[combine.sub_b_a0],
-		mAText[combine.mul_a0],aAText[combine.add_a0],
-		saRGBText[combine.sub_a_rgb1],sbRGBText[combine.sub_b_rgb1],mRGBText[combine.mul_rgb1],
-		aRGBText[combine.add_rgb1],saAText[combine.sub_a_a1],sbAText[combine.sub_b_a1],
-		mAText[combine.mul_a1],aAText[combine.add_a1]);
-	UINT32 LocalDebugMode=0;
+		saRGBText[combine.sub_a_rgb0], sbRGBText[combine.sub_b_rgb0], mRGBText[combine.mul_rgb0],
+		aRGBText[combine.add_rgb0], saAText[combine.sub_a_a0], sbAText[combine.sub_b_a0],
+		mAText[combine.mul_a0], aAText[combine.add_a0],
+		saRGBText[combine.sub_a_rgb1], sbRGBText[combine.sub_b_rgb1], mRGBText[combine.mul_rgb1],
+		aRGBText[combine.add_rgb1], saAText[combine.sub_a_a1], sbAText[combine.sub_b_a1],
+		mAText[combine.mul_a1], aAText[combine.add_a1]);
+	UINT32 LocalDebugMode = 0;
 	if (LocalDebugMode)
-		popmessage("%d %d %d %d %d %d %d %d",combine.sub_a_rgb0,combine.sub_b_rgb0,combine.mul_rgb0,combine.add_rgb0,
-	combine.sub_a_a0,combine.sub_b_a0,combine.mul_a0,combine.add_a0);
+		popmessage("%d %d %d %d %d %d %d %d", combine.sub_a_rgb0, combine.sub_b_rgb0, combine.mul_rgb0, combine.add_rgb0,
+			combine.sub_a_a0, combine.sub_b_a0, combine.mul_a0, combine.add_a0);
 }
 
 void show_blender_equation(void)
@@ -10754,18 +10723,18 @@ const char * bAText[2][4] = {
 };
 	if (other_modes.cycle_type != CYCLE_TYPE_1 && other_modes.cycle_type != CYCLE_TYPE_2)
 	{
-		popmessage("show_blender_equation not implemented for cycle type %d",other_modes.cycle_type);
+		popmessage("show_blender_equation not implemented for cycle type %d", other_modes.cycle_type);
 		return;
 	}
 	if (other_modes.cycle_type == CYCLE_TYPE_1)
-		popmessage("Blender equation is %s * %s + %s * %s",bRGBText[other_modes.blend_m1a_0],
-			bAText[0][other_modes.blend_m1b_0],bRGBText[other_modes.blend_m2a_0],bAText[1][other_modes.blend_m2b_0]);
+		popmessage("Blender equation is %s * %s + %s * %s", bRGBText[other_modes.blend_m1a_0],
+			bAText[0][other_modes.blend_m1b_0], bRGBText[other_modes.blend_m2a_0], bAText[1][other_modes.blend_m2b_0]);
 	else if (other_modes.cycle_type == CYCLE_TYPE_2)
 		popmessage("Blender equations are %s * %s + %s * %s\n%s * %s + %s * %s",
-			bRGBText[other_modes.blend_m1a_0],bAText[0][other_modes.blend_m1b_0],
-			bRGBText[other_modes.blend_m2a_0],bAText[1][other_modes.blend_m2b_0],
-			bRGBText[other_modes.blend_m1a_1],bAText[0][other_modes.blend_m1b_1],
-			bRGBText[other_modes.blend_m2a_1],bAText[1][other_modes.blend_m2b_1]);
+			bRGBText[other_modes.blend_m1a_0], bAText[0][other_modes.blend_m1b_0],
+			bRGBText[other_modes.blend_m2a_0], bAText[1][other_modes.blend_m2b_0],
+			bRGBText[other_modes.blend_m1a_1], bAText[0][other_modes.blend_m1b_1],
+			bRGBText[other_modes.blend_m2a_1], bAText[1][other_modes.blend_m2b_1]);
 }
 
 void showtile(UINT32 tilenum, int stop, int clamped)
@@ -10820,7 +10789,7 @@ void showtile(UINT32 tilenum, int stop, int clamped)
 		tilenum, tbase, tformat, tsize, tile[tilenum].cs, tile[tilenum].ms, tile[tilenum].ct, tile[tilenum].mt,
 		tile[tilenum].mask_s, tile[tilenum].mask_t);
 
-	res = IDirectDrawSurface_Lock(lpddsback, 0, &ddsd, DDLOCK_SURFACEMEMORYPTR | DDLOCK_NOSYSLOCK, 0);
+	res = IDirectDrawSurface_Lock(lpddsback, NULL, &ddsd, DDLOCK_SURFACEMEMORYPTR | DDLOCK_NOSYSLOCK, NULL);
 	if (res != DD_OK)
 		fatalerror("showtile: Lock failed.");
 	PreScale = (INT32*)ddsd.lpSurface;
@@ -11033,12 +11002,12 @@ endi8:
 		break;
 	}
 
-	res = IDirectDrawSurface_Unlock(lpddsback, 0);
+	res = IDirectDrawSurface_Unlock(lpddsback, NULL);
 	if (res != DD_OK)
 		fatalerror("showtile: Unlock failed.");
 
 	src.bottom = 480;
-	res = IDirectDrawSurface_Blt(lpddsprimary, &dst, lpddsback, &src, DDBLT_WAIT, 0);
+	res = IDirectDrawSurface_Blt(lpddsprimary, &dst, lpddsback, &src, DDBLT_WAIT, NULL);
 	if (res != DD_OK)
 		fatalerror("showtile: Blt failed.");
 
@@ -11047,13 +11016,13 @@ endi8:
 		while(!GetAsyncKeyState(VK_TAB))
 		{
 			if (GetAsyncKeyState(VK_ADD))
-				showtile((tilenum + 1)&7,1,clamped);
+				showtile((tilenum + 1) & 7, 1, clamped);
 			else if (GetAsyncKeyState(VK_SUBTRACT))
-				showtile((tilenum - 1)&7,1,clamped);
-			else if (GetAsyncKeyState(0x43))
+				showtile((tilenum - 1) & 7, 1, clamped);
+			else if (GetAsyncKeyState(0x43))	// 'c'
 			{
 				clamped = (!clamped) ? 1 : 0;
-				showtile(tilenum,1,clamped);
+				showtile(tilenum, 1, clamped);
 			}
 		}
 	}
@@ -11061,7 +11030,7 @@ endi8:
 
 void show_tri_command(void)
 {
-	popmessage("w0: 0x%08x, w1: 0x%08x, w2: 0x%08x",rdp_cmd_data[rdp_cmd_cur], rdp_cmd_data[rdp_cmd_cur + 1], rdp_cmd_data[rdp_cmd_cur + 2]);
+	popmessage("w0: 0x%08x, w1: 0x%08x, w2: 0x%08x", rdp_cmd_data[rdp_cmd_cur], rdp_cmd_data[rdp_cmd_cur + 1], rdp_cmd_data[rdp_cmd_cur + 2]);
 }
 
 UINT32 compare_tri_command(UINT32 w0, UINT32 w1, UINT32 w2)
@@ -11111,7 +11080,7 @@ void show_current_cfb(int isviorigin)
 	if (hres > 320 || vres > 240)
 	{
 		if (GetAsyncKeyState(VK_SCROLL))
-			popmessage("Cannot double the resolution: %d %d",hres,vres);
+			popmessage("Cannot double the resolution: %d %d", hres, vres);
 		if (double_stretch)
 			double_stretch = 2;
 		else
@@ -11119,12 +11088,12 @@ void show_current_cfb(int isviorigin)
 	}
 #endif
 
-	res = IDirectDrawSurface_Lock(lpddsback, 0, &ddsd, DDLOCK_SURFACEMEMORYPTR | DDLOCK_NOSYSLOCK, 0);
+	res = IDirectDrawSurface_Lock(lpddsback, NULL, &ddsd, DDLOCK_SURFACEMEMORYPTR | DDLOCK_NOSYSLOCK, NULL);
 	if (res != DD_OK)
 		fatalerror("show_current_cfb: Blt failed.");
 	PreScale = (INT32*)ddsd.lpSurface;
 
-    switch (vi_control & 0x3)
+	switch (vi_control & 0x3)
 	{
 		case 0:
 		case 1:
@@ -11184,7 +11153,7 @@ void show_current_cfb(int isviorigin)
 
 		case 3:
 		{
-            UINT32 fbidx32 = (fbaddr & 0xffffff) >> 2;
+			UINT32 fbidx32 = (fbaddr & 0xffffff) >> 2;
 			for (j = 0; j < vres; j++)
 			{
 				INT32* d = &PreScale[j * pitchindwords];
@@ -11200,11 +11169,11 @@ void show_current_cfb(int isviorigin)
 		break;
 		}
 
-        default:
+		default:
 			popmessage("Unknown framebuffer format %d\n", vi_control & 0x3);
 			break;
 	}
-	res = IDirectDrawSurface_Unlock(lpddsback, 0);
+	res = IDirectDrawSurface_Unlock(lpddsback, NULL);
 	if (res != DD_OK)
 		fatalerror("show_current_cfb: Unlock failed.");
 
@@ -11214,7 +11183,7 @@ void show_current_cfb(int isviorigin)
 	RECT smallrect = dst;
 	smallrect.bottom = smallrect.top + vres + 1;
 	smallrect.right = smallrect.left + hres + 1;
-	res = IDirectDrawSurface_Blt(lpddsprimary, &smallrect, lpddsback, &srcrect, DDBLT_WAIT, 0);
+	res = IDirectDrawSurface_Blt(lpddsprimary, &smallrect, lpddsback, &srcrect, DDBLT_WAIT, NULL);
 	if (res != DD_OK)
 		fatalerror("show_current_cfb: Blt failed");
 }
