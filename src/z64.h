@@ -3,9 +3,19 @@
 
 #include <stdio.h>
 
+#if (PJ64_PLUGIN_API)
+	#ifndef _MSC_VER
+		#error Non-MSVC builds not supported. Try PJ64_PLUGIN_API=0
+	#endif
+	#include <windows.h>
+#else
+	#include <SDL2/SDL.h>
+#endif
+
 #ifdef WIN32
-#include <windows.h>
-#include <ddraw.h>
+	#include <ddraw.h>
+#else
+	#error Non-Win32 builds not yet supported.
 #endif
 
 #if defined (_MSC_VER) && (_MSC_VER >= 1300)
@@ -67,7 +77,6 @@ typedef int8_t INT8;
 
 #define R4300i_SP_Intr 1
 
-
 #define LSB_FIRST 1
 #ifdef LSB_FIRST
 	#define BYTE_ADDR_XOR		3
@@ -92,14 +101,11 @@ typedef int8_t INT8;
 #ifdef _MSC_VER
 #define STRICTINLINE	__forceinline
 #else
-#define STRICTINLINE	inline
+#define STRICTINLINE	static inline
 #endif
 
 #define PRESCALE_WIDTH 640
 #define PRESCALE_HEIGHT 625
-extern const int screen_width, screen_height;
-
-typedef unsigned int offs_t;
 
 #define rdram ((UINT32*)gfx.RDRAM)
 #define rsp_imem ((UINT32*)gfx.IMEM)

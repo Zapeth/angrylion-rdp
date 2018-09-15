@@ -3,8 +3,12 @@
 #endif
 
 #include "z64.h"
-#include "gfx_1.3.h"
 #include "tctables.h"
+#if (PJ64_PLUGIN_API)
+	#include "gfx_1.3.h"
+#else
+	#include "m64p_plugin.h"
+#endif
 #include <stdarg.h>
 
 extern GFX_INFO gfx;
@@ -23,34 +27,8 @@ extern GFX_INFO gfx;
 #define GET_MED_RGBA16_TMEM(x)	(replicated_rgba[((x) >> 6) & 0x1f])
 #define GET_HI_RGBA16_TMEM(x)	(replicated_rgba[(x) >> 11])
 
-INLINE void fatalerror(const char * err, ...)
-{
-	char VsprintfBuffer[2000];
-	va_list arg;
-	va_start(arg, err);
-	vsnprintf(VsprintfBuffer, sizeof(VsprintfBuffer), err, arg);
-#ifdef _WIN32
-	MessageBoxA(0,VsprintfBuffer,"RDP: fatal error",MB_OK);
-#else
-	fprintf(stderr, VsprintfBuffer);
-#endif
-	va_end(arg);
-	exit(0);
-}
-
-INLINE void popmessage(const char* err, ...)
-{
-	char VsprintfBuffer[2000];
-	va_list arg;
-	va_start(arg, err);
-	vsnprintf(VsprintfBuffer, sizeof(VsprintfBuffer), err, arg);
-#ifdef _WIN32
-	MessageBoxA(0,VsprintfBuffer,"RDP: warning",MB_OK);
-#else
-	fprintf(stdout, VsprintfBuffer);
-#endif
-	va_end(arg);
-}
+extern INLINE void popmessage(const char* err, ...);
+extern INLINE void fatalerror(const char* err, ...);
 
 #define LOG_RDP_EXECUTION 0
 #define	DETAILED_LOGGING 0
@@ -401,7 +379,7 @@ STRICTINLINE void blender_2cycle_cycle1(UINT32* fr, UINT32* fg, UINT32* fb, int 
 STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT32 SST, UINT32 tilenum, UINT32 cycle);
 STRICTINLINE void tc_pipeline_copy(INT32* sss0, INT32* sss1, INT32* sss2, INT32* sss3, INT32* sst, int tilenum);
 STRICTINLINE void tc_pipeline_load(INT32* sss, INT32* sst, int tilenum, int coord_quad);
-STRICTINLINE void tcclamp_generic(INT32* S, INT32* T, INT32* SFRAC, INT32* TFRAC, INT32 maxs, INT32 maxt, INT32 num);
+//STRICTINLINE void tcclamp_generic(INT32* S, INT32* T, INT32* SFRAC, INT32* TFRAC, INT32 maxs, INT32 maxt, INT32 num);
 STRICTINLINE void tcclamp_cycle(INT32* S, INT32* T, INT32* SFRAC, INT32* TFRAC, INT32 maxs, INT32 maxt, INT32 num);
 STRICTINLINE void tcclamp_cycle_light(INT32* S, INT32* T, INT32 maxs, INT32 maxt, INT32 num);
 STRICTINLINE void tcmask(INT32* S, INT32* T, INT32 num);
@@ -542,6 +520,7 @@ static void (*tcdiv_func[2])(INT32, INT32, INT32, INT32*, INT32*) =
 	tcdiv_nopersp, tcdiv_persp
 };
 
+#ifdef __cplusplus
 void (*fbread1_ptr)(UINT32, UINT32*) = fbread_func[0];
 void (*fbread2_ptr)(UINT32, UINT32*) = fbread2_func[0];
 void (*fbwrite_ptr)(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) = fbwrite_func[0];
@@ -549,6 +528,15 @@ void (*fbwrite_ptr)(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) = fb
 void (*tcdiv_ptr)(INT32, INT32, INT32, INT32*, INT32*) = tcdiv_func[0];
 
 void (*vi_fetch_filter_ptr)(CCVG*, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) = vi_fetch_filter_func[0];
+#else
+void (*fbread1_ptr)(UINT32, UINT32*) = fbread_4;
+void (*fbread2_ptr)(UINT32, UINT32*) = fbread2_4;
+void (*fbwrite_ptr)(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) = fbwrite_4;
+
+void (*tcdiv_ptr)(INT32, INT32, INT32, INT32*, INT32*) = tcdiv_nopersp;
+
+void (*vi_fetch_filter_ptr)(CCVG*, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) = vi_fetch_filter16;
+#endif
 
 typedef struct {
 	UINT8 cvg;
@@ -624,7 +612,6 @@ extern RECT src, dst;
 
 UINT32 z64gl_command = 0;
 UINT32 command_counter = 0;
-int SaveLoaded = 0;
 UINT32 max_level = 0;
 INT32 min_level = 0;
 INT32* PreScale;
