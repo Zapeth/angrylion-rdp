@@ -252,6 +252,8 @@ typedef struct {
 #define ZMODE_TRANSPARENT		2
 #define ZMODE_DECAL				3
 
+#define HB_CLEAN				4
+
 COMBINE_MODES combine;
 OTHER_MODES other_modes;
 
@@ -481,7 +483,7 @@ void bytefill_tmem(char byte);
 static INT32 k0_tf = 0, k1_tf = 0, k2_tf = 0, k3_tf = 0;
 static INT32 k4 = 0, k5 = 0;
 static INT32 lod_frac = 0;
-UINT32 DebugMode = 0, DebugMode2 = 0; INT32 DebugMode3 = 0;
+UINT32 DebugMode = 0, DebugMode2 = 0, DebugMode4 = 0; INT32 DebugMode3 = 0;
 int debugcolor = 0;
 UINT8 hidden_bits[0x400000];
 struct {UINT32 shift; UINT32 add;} z_dec_table[8] = {
@@ -576,7 +578,7 @@ CVtcmaskDERIVATIVE cvarray[0x100];
 #define PAIRREAD16(rdst, hdst, in) \
 { \
 	(in) &= (RDRAM_MASK >> 1); \
-	if ((in) <= idxlim16) {(rdst) = rdram_16[(in) ^ WORD_ADDR_XOR]; (hdst) = hidden_bits[(in)];} \
+	if ((in) <= idxlim16) {(rdst) = rdram_16[(in) ^ WORD_ADDR_XOR]; (hdst) = hidden_bits[(in)]; if ((hdst) & HB_CLEAN) (hdst) = ((rdst) & 1) ? 3 : 0;} \
 	else {(rdst) = (hdst) = 0;} \
 }
 
@@ -592,10 +594,10 @@ CVtcmaskDERIVATIVE cvarray[0x100];
 	if ((in) <= idxlim32) {rdram[(in)] = (rval); hidden_bits[(in) << 1] = (hval0); hidden_bits[((in) << 1) + 1] = (hval1);} \
 }
 
-#define PAIRWRITE8(in, rval, hval) \
+#define PAIRWRITE8(in, rval) \
 { \
 	(in) &= RDRAM_MASK; \
-	if ((in) <= plim) {rdram_8[(in) ^ BYTE_ADDR_XOR] = (rval); if ((in) & 1) hidden_bits[(in) >> 1] = (hval);} \
+	if ((in) <= plim) {if ((in) & 1) hidden_bits[(in) >> 1] = ((rval) & 1) ? 3 : 0; rdram_8[(in) ^ BYTE_ADDR_XOR] = (rval); } \
 }
 
 struct onetime {
@@ -921,7 +923,7 @@ int rdp_init()
 
 	memset(TMEM, 0, 0x1000);
 
-	memset(hidden_bits, 3, sizeof(hidden_bits));
+	memset(hidden_bits, HB_CLEAN, sizeof(hidden_bits));
 
 	memset(tile, 0, sizeof(tile));
 
@@ -936,6 +938,9 @@ int rdp_init()
 	memset(&env_color, 0, sizeof(COLOR));
 	memset(&key_scale, 0, sizeof(COLOR));
 	memset(&key_center, 0, sizeof(COLOR));
+
+	memset(&memory_color, 0, sizeof(COLOR));
+	memset(&pre_memory_color, 0, sizeof(COLOR));
 
 	rdp_pipeline_crashed = 0;
 	memset(&onetimewarnings, 0, sizeof(onetimewarnings));
@@ -5240,7 +5245,7 @@ void render_spans_2cycle_complete(int start, int end, int tilenum, int flip)
 	int sr, sg, sb, sa, sz, ss, st, sw;
 	int xstart, xend, xendsc;
 	int sss = 0, sst = 0;
-	int curpixel = 0;
+	UINT32 curpixel;
 	int wen;
 
 	int x, length, scdiff, lodlength;
@@ -6222,7 +6227,7 @@ void render_spans_copy(int start, int end, int tilenum, int flip)
 					tempbyte = (UINT32)((copyqword >> (k << 3)) & 0xff);
 					if (alphamask & (1 << k))
 					{
-						PAIRWRITE8(tempdword, tempbyte, (tempbyte & 1) ? 3 : 0);
+						PAIRWRITE8(tempdword, tempbyte);
 					}
 					k--;
 					tempdword += xinc;
@@ -8416,7 +8421,7 @@ INLINE void fbwrite_4(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blen
 INLINE void fbwrite_8(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg)
 {
 	UINT32 fb = fb_address + curpixel;
-	PAIRWRITE8(fb, r & 0xff, (r & 1) ? 3 : 0);
+	PAIRWRITE8(fb, (fb & 1) ? (g & 0xff) : (r & 0xff));
 }
 
 INLINE void fbwrite_16(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg)
@@ -8472,8 +8477,7 @@ INLINE void fbfill_8(UINT32 curpixel)
 {
 	UINT32 fb = fb_address + curpixel;
 	UINT32 val = (fill_color >> (((fb & 3) ^ 3) << 3)) & 0xff;
-	UINT8 hval = ((val & 1) << 1) | (val & 1);
-	PAIRWRITE8(fb, val, hval);
+	PAIRWRITE8(fb, val);
 }
 
 INLINE void fbfill_16(UINT32 curpixel)
@@ -8511,34 +8515,40 @@ INLINE void fbread2_4(UINT32 curpixel, UINT32* curpixel_memcvg)
 
 INLINE void fbread_8(UINT32 curpixel, UINT32* curpixel_memcvg)
 {
-	UINT8 mem;
-	UINT32 addr = fb_address + curpixel;
-	RREADADDR8(mem, addr);
-	memory_color.r = memory_color.g = memory_color.b = mem;
+	if (other_modes.image_read_en)
+	{
+		UINT8 mem;
+		UINT32 addr = fb_address + curpixel;
+		RREADADDR8(mem, addr);
+		memory_color.r = memory_color.g = memory_color.b = mem;
+	}
 	*curpixel_memcvg = 7;
 	memory_color.a = 0xe0;
 }
 
 INLINE void fbread2_8(UINT32 curpixel, UINT32* curpixel_memcvg)
 {
-	UINT8 mem;
-	UINT32 addr = fb_address + curpixel;
-	RREADADDR8(mem, addr);
-	pre_memory_color.r = pre_memory_color.g = pre_memory_color.b = mem;
+	if (other_modes.image_read_en)
+	{
+		UINT8 mem;
+		UINT32 addr = fb_address + curpixel;
+		RREADADDR8(mem, addr);
+		pre_memory_color.r = pre_memory_color.g = pre_memory_color.b = mem;
+	}
 	pre_memory_color.a = 0xe0;
 	*curpixel_memcvg = 7;
 }
 
 INLINE void fbread_16(UINT32 curpixel, UINT32* curpixel_memcvg)
 {
-	UINT16 fword;
-	UINT8 hbyte;
-	UINT32 addr = (fb_address >> 1) + curpixel;
-
-	UINT8 lowbits;
-
 	if (other_modes.image_read_en)
 	{
+		UINT16 fword;
+		UINT8 hbyte;
+		UINT32 addr = (fb_address >> 1) + curpixel;
+
+		UINT8 lowbits;
+
 		PAIRREAD16(fword, hbyte, addr);
 
 		if (fb_format == FORMAT_RGBA)
@@ -8559,17 +8569,6 @@ INLINE void fbread_16(UINT32 curpixel, UINT32* curpixel_memcvg)
 	}
 	else
 	{
-		RREADIDX16(fword, addr);
-
-		if (fb_format == FORMAT_RGBA)
-		{
-			memory_color.r = GET_HI(fword);
-			memory_color.g = GET_MED(fword);
-			memory_color.b = GET_LOW(fword);
-		}
-		else
-			memory_color.r = memory_color.g = memory_color.b = fword >> 8;
-
 		*curpixel_memcvg = 7;
 		memory_color.a = 0xe0;
 	}
@@ -8577,14 +8576,14 @@ INLINE void fbread_16(UINT32 curpixel, UINT32* curpixel_memcvg)
 
 INLINE void fbread2_16(UINT32 curpixel, UINT32* curpixel_memcvg)
 {
-	UINT16 fword;
-	UINT8 hbyte;
-	UINT32 addr = (fb_address >> 1) + curpixel;
-
-	UINT8 lowbits;
-
 	if (other_modes.image_read_en)
 	{
+		UINT16 fword;
+		UINT8 hbyte;
+		UINT32 addr = (fb_address >> 1) + curpixel;
+
+		UINT8 lowbits;
+
 		PAIRREAD16(fword, hbyte, addr);
 
 		if (fb_format == FORMAT_RGBA)
@@ -8605,17 +8604,6 @@ INLINE void fbread2_16(UINT32 curpixel, UINT32* curpixel_memcvg)
 	}
 	else
 	{
-		RREADIDX16(fword, addr);
-
-		if (fb_format == FORMAT_RGBA)
-		{
-			pre_memory_color.r = GET_HI(fword);
-			pre_memory_color.g = GET_MED(fword);
-			pre_memory_color.b = GET_LOW(fword);
-		}
-		else
-			pre_memory_color.r = pre_memory_color.g = pre_memory_color.b = fword >> 8;
-
 		*curpixel_memcvg = 7;
 		pre_memory_color.a = 0xe0;
 	}
@@ -8623,14 +8611,14 @@ INLINE void fbread2_16(UINT32 curpixel, UINT32* curpixel_memcvg)
 
 INLINE void fbread_32(UINT32 curpixel, UINT32* curpixel_memcvg)
 {
-	UINT32 mem, addr = (fb_address >> 2) + curpixel;
-	RREADIDX32(mem, addr);
-	memory_color.r = (mem >> 24) & 0xff;
-	memory_color.g = (mem >> 16) & 0xff;
-	memory_color.b = (mem >> 8) & 0xff;
-
 	if (other_modes.image_read_en)
 	{
+		UINT32 mem, addr = (fb_address >> 2) + curpixel;
+		RREADIDX32(mem, addr);
+		memory_color.r = (mem >> 24) & 0xff;
+		memory_color.g = (mem >> 16) & 0xff;
+		memory_color.b = (mem >> 8) & 0xff;
+
 		*curpixel_memcvg = (mem >> 5) & 7;
 		memory_color.a = mem & 0xe0;
 	}
@@ -8643,14 +8631,14 @@ INLINE void fbread_32(UINT32 curpixel, UINT32* curpixel_memcvg)
 
 INLINE void fbread2_32(UINT32 curpixel, UINT32* curpixel_memcvg)
 {
-	UINT32 mem, addr = (fb_address >> 2) + curpixel;
-	RREADIDX32(mem, addr);
-	pre_memory_color.r = (mem >> 24) & 0xff;
-	pre_memory_color.g = (mem >> 16) & 0xff;
-	pre_memory_color.b = (mem >> 8) & 0xff;
-
 	if (other_modes.image_read_en)
 	{
+		UINT32 mem, addr = (fb_address >> 2) + curpixel;
+		RREADIDX32(mem, addr);
+		pre_memory_color.r = (mem >> 24) & 0xff;
+		pre_memory_color.g = (mem >> 16) & 0xff;
+		pre_memory_color.b = (mem >> 8) & 0xff;
+
 		*curpixel_memcvg = (mem >> 5) & 7;
 		pre_memory_color.a = mem & 0xe0;
 	}
