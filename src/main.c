@@ -464,7 +464,11 @@ EXPORT void CALL RomClosed(void)
 	command_counter = 0;
 }
 
+#if (PJ64_PLUGIN_API)
 EXPORT void CALL RomOpen(void)
+#else
+EXPORT int CALL RomOpen(void)
+#endif
 {
 #if !(PJ64_PLUGIN_API)
 	// clean up any existing resources, just in case
@@ -482,7 +486,7 @@ EXPORT void CALL RomOpen(void)
 	if (window == NULL)
 	{
 		fatalerror("SDL_CreateWindow failed: %s", SDL_GetError());
-		return;
+		goto romopen_error;
 	}
 	HWND hWnd = GetActiveWindow();
 
@@ -518,7 +522,10 @@ EXPORT void CALL RomOpen(void)
 	res = DirectDrawCreateEx(NULL, (LPVOID*)&lpdd, &IID_IDirectDraw7, NULL);
 #endif
 	if(res != DD_OK)
+	{
 		fatalerror("Couldn't create a DirectDraw object");
+		goto romopen_error;
+	}
 
 #if (PJ64_PLUGIN_API)
 	res = IDirectDraw_SetCooperativeLevel(lpdd, gfx.hWnd, DDSCL_NORMAL);
@@ -526,7 +533,10 @@ EXPORT void CALL RomOpen(void)
 	res = IDirectDraw_SetCooperativeLevel(lpdd, hWnd, DDSCL_NORMAL);
 #endif
 	if(res != DD_OK)
+	{
 		fatalerror("Couldn't set a cooperative level. Error code %x", res);
+		goto romopen_error;
+	}
 
 	memset(&ddsd, 0, sizeof(ddsd));
 	ddsd.dwSize = sizeof(ddsd);
@@ -535,7 +545,10 @@ EXPORT void CALL RomOpen(void)
 
 	res = IDirectDraw_CreateSurface(lpdd, &ddsd, &lpddsprimary, NULL);
 	if(res != DD_OK)
+	{
 		fatalerror("CreateSurface for a primary surface failed. Error code %x", res);
+		goto romopen_error;
+	}
 
 	ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
 	ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
@@ -551,30 +564,51 @@ EXPORT void CALL RomOpen(void)
 	ddsd.ddpfPixelFormat = ftpixel;
 	res = IDirectDraw_CreateSurface(lpdd, &ddsd, &lpddsback, NULL);
 	if (res == DDERR_INVALIDPIXELFORMAT)
+	{
 		fatalerror("ARGB8888 is not supported. You can try changing desktop color depth to 32-bit, but most likely that won't help.");
+		goto romopen_error;
+	}
 	else if(res != DD_OK)
+	{
 		fatalerror("CreateSurface for a secondary surface failed. Error code %x", res);
+		goto romopen_error;
+	}
 
 	res = IDirectDrawSurface_GetSurfaceDesc(lpddsback, &ddsd);
 	if (res != DD_OK)
+	{
 		fatalerror("GetSurfaceDesc failed.");
+		goto romopen_error;
+	}
 	if ((ddsd.lPitch & 3) || ddsd.lPitch < (PRESCALE_WIDTH << 2))
+	{
 		fatalerror("Pitch of a secondary surface is either not 32 bit aligned or two small.");
+		goto romopen_error;
+	}
 	pitchindwords = ddsd.lPitch >> 2;
 
 	res = IDirectDraw_CreateClipper(lpdd, 0, &lpddcl, NULL);
 	if (res != DD_OK)
+	{
 		fatalerror("Couldn't create a clipper.");
+		goto romopen_error;
+	}
 #if (PJ64_PLUGIN_API)
 	res = IDirectDrawClipper_SetHWnd(lpddcl, 0, gfx.hWnd);
 #else
 	res = IDirectDrawClipper_SetHWnd(lpddcl, 0, hWnd);
 #endif
 	if (res != DD_OK)
+	{
 		fatalerror("Couldn't register a windows handle as a clipper.");
+		goto romopen_error;
+	}
 	res = IDirectDrawSurface_SetClipper(lpddsprimary, lpddcl);
 	if (res != DD_OK)
+	{
 		fatalerror("Couldn't attach a clipper to a surface.");
+		goto romopen_error;
+	}
 
 	src.top = src.left = 0;
 	src.bottom = 0;
@@ -601,7 +635,21 @@ EXPORT void CALL RomOpen(void)
 	src.bottom = PRESCALE_HEIGHT;
 	res = IDirectDrawSurface_Blt(lpddsback, &src, NULL, 0, DDBLT_COLORFILL | DDBLT_WAIT, &ddbltfx);
 
-	rdp_init();
+	if (rdp_init() != 0)
+	{
+		fatalerror("rdp_init failed");
+		goto romopen_error;
+	}
+
+#if (PJ64_PLUGIN_API)
+	// no return value here, just exit
+romopen_error:
+	return;
+#else
+	return 1;
+romopen_error:
+	return 0;
+#endif
 }
 
 EXPORT void CALL ShowCFB(void)
