@@ -377,6 +377,7 @@ STRICTINLINE void combiner_2cycle_cycle0(int adseed, UINT32 cvg, INT32* acalpha)
 STRICTINLINE void combiner_2cycle_cycle1(int adseed, UINT32* curpixel_cvg);
 STRICTINLINE int blender_1cycle(UINT32* fr, UINT32* fg, UINT32* fb, int dith, UINT32 blend_en, UINT32 prewrap, UINT32 curpixel_cvg, UINT32 curpixel_cvbit);
 STRICTINLINE int blender_2cycle_cycle0(UINT32 curpixel_cvg, UINT32 curpixel_cvbit);
+STRICTINLINE void blender_2cycle_cycle0_gval(UINT32 curpixel);
 STRICTINLINE void blender_2cycle_cycle1(UINT32* fr, UINT32* fg, UINT32* fb, int dith, UINT32 blend_en, UINT32 prewrap);
 STRICTINLINE void texture_pipeline_cycle(COLOR* TEX, COLOR* prev, INT32 SSS, INT32 SST, UINT32 tilenum, UINT32 cycle);
 STRICTINLINE void tc_pipeline_copy(INT32* sss0, INT32* sss1, INT32* sss2, INT32* sss3, INT32* sst, int tilenum);
@@ -394,21 +395,25 @@ STRICTINLINE int alpha_compare(INT32 comb_alpha);
 STRICTINLINE INT32 color_combiner_equation(INT32 a, INT32 b, INT32 c, INT32 d);
 STRICTINLINE INT32 alpha_combiner_equation(INT32 a, INT32 b, INT32 c, INT32 d);
 STRICTINLINE void blender_equation_cycle0(int* r, int* g, int* b);
+STRICTINLINE void blender_equation_cycle0_gval(int* g);
 STRICTINLINE void blender_equation_cycle0_2(int* r, int* g, int* b);
+STRICTINLINE void blender_equation_cycle0_2_gval(int* g);
 STRICTINLINE void blender_equation_cycle1(int* r, int* g, int* b);
+STRICTINLINE void blender_equation_cycle1_gval(int* g);
 STRICTINLINE UINT32 rightcvghex(UINT32 x, UINT32 fmask);
 STRICTINLINE UINT32 leftcvghex(UINT32 x, UINT32 fmask);
 STRICTINLINE INT32 chroma_key_min(COLOR* col);
+void complete_delayed_hbwrites(int delayedhbwidx);
 STRICTINLINE void compute_cvg_noflip(INT32 scanline);
 STRICTINLINE void compute_cvg_flip(INT32 scanline);
-INLINE void fbwrite_4(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg);
-INLINE void fbwrite_8(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg);
-INLINE void fbwrite_16(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg);
-INLINE void fbwrite_32(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg);
-INLINE void fbfill_4(UINT32 curpixel);
-INLINE void fbfill_8(UINT32 curpixel);
-INLINE void fbfill_16(UINT32 curpixel);
-INLINE void fbfill_32(UINT32 curpixel);
+INLINE void fbwrite_4(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx);
+INLINE void fbwrite_8(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx);
+INLINE void fbwrite_16(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx);
+INLINE void fbwrite_32(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx);
+INLINE void fbfill_4(UINT32 curpixel, int flip, int* delayedhbwidx);
+INLINE void fbfill_8(UINT32 curpixel, int flip, int* delayedhbwidx);
+INLINE void fbfill_16(UINT32 curpixel, int flip, int* delayedhbwidx);
+INLINE void fbfill_32(UINT32 curpixel, int flip, int* delayedhbwidx);
 INLINE void fbread_4(UINT32 num, UINT32* curpixel_memcvg);
 INLINE void fbread_8(UINT32 num, UINT32* curpixel_memcvg);
 INLINE void fbread_16(UINT32 num, UINT32* curpixel_memcvg);
@@ -417,6 +422,11 @@ INLINE void fbread2_4(UINT32 num, UINT32* curpixel_memcvg);
 INLINE void fbread2_8(UINT32 num, UINT32* curpixel_memcvg);
 INLINE void fbread2_16(UINT32 num, UINT32* curpixel_memcvg);
 INLINE void fbread2_32(UINT32 num, UINT32* curpixel_memcvg);
+STRICTINLINE void pairwrite8(UINT32 in, UINT32 rval, int flip, int* delayedhbwidx);
+STRICTINLINE void pairwrite16(UINT32 in, UINT16 rval, UINT8 hval, int iscolor);
+STRICTINLINE void pairwrite32(UINT32 in, INT32 cval, UINT8 hval0, UINT8 hval1);
+void rejected_hbwrite_1cycle(int cdith, UINT32 blend_en, UINT32 prewrap, UINT32 curpixel, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx);
+void rejected_hbwrite_2cycle(int cdith, UINT32 blend_en, UINT32 prewrap, UINT32 curpixel, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx);
 STRICTINLINE UINT32 z_decompress(UINT32 rawz);
 STRICTINLINE UINT32 dz_decompress(UINT32 compresseddz);
 STRICTINLINE UINT32 dz_compress(UINT32 value);
@@ -455,6 +465,7 @@ STRICTINLINE void video_max_optimized(UINT32* Pixels, UINT32* penumin, UINT32* p
 INLINE void calculate_clamp_diffs(UINT32 tile);
 INLINE void calculate_tile_derivs(UINT32 tile);
 STRICTINLINE void rgb_dither(int* r, int* g, int* b, int dith);
+STRICTINLINE void rgb_dither_gval(int* g, int dith);
 STRICTINLINE void get_dither_noise(int x, int y, int* cdith, int* adith);
 STRICTINLINE void vi_vl_lerp(CCVG* up, CCVG down, UINT32 frac);
 STRICTINLINE void rgba_correct(int offx, int offy, int r, int g, int b, int a, UINT32 cvg);
@@ -512,9 +523,14 @@ static void (*fbread2_func[4])(UINT32, UINT32*) =
 	fbread2_4, fbread2_8, fbread2_16, fbread2_32
 };
 
-static void (*fbwrite_func[4])(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) =
+static void (*fbwrite_func[4])(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, int, int*) =
 {
 	fbwrite_4, fbwrite_8, fbwrite_16, fbwrite_32
+};
+
+static void (*fbfill_func[4])(UINT32, int, int*) =
+{
+	fbfill_4, fbfill_8, fbfill_16, fbfill_32
 };
 
 static void (*tcdiv_func[2])(INT32, INT32, INT32, INT32*, INT32*) =
@@ -525,7 +541,8 @@ static void (*tcdiv_func[2])(INT32, INT32, INT32, INT32*, INT32*) =
 #ifdef __cplusplus
 void (*fbread1_ptr)(UINT32, UINT32*) = fbread_func[0];
 void (*fbread2_ptr)(UINT32, UINT32*) = fbread2_func[0];
-void (*fbwrite_ptr)(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) = fbwrite_func[0];
+void (*fbwrite_ptr)(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, int, int*) = fbwrite_func[0];
+void (*fbfill_ptr)(UINT32, int, int*) = fbfill_func[0];
 
 void (*tcdiv_ptr)(INT32, INT32, INT32, INT32*, INT32*) = tcdiv_func[0];
 
@@ -533,7 +550,8 @@ void (*vi_fetch_filter_ptr)(CCVG*, UINT32, UINT32, UINT32, UINT32, UINT32, UINT3
 #else
 void (*fbread1_ptr)(UINT32, UINT32*) = fbread_4;
 void (*fbread2_ptr)(UINT32, UINT32*) = fbread2_4;
-void (*fbwrite_ptr)(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32) = fbwrite_4;
+void (*fbwrite_ptr)(UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, UINT32, int, int*) = fbwrite_4;
+void (*fbfill_ptr)(UINT32, int, int*) = fbfill_4;
 
 void (*tcdiv_ptr)(INT32, INT32, INT32, INT32*, INT32*) = tcdiv_nopersp;
 
@@ -564,6 +582,8 @@ UINT16 deltaz_comparator_lut[0x10000];
 INT32 clamp_t_diff[8];
 INT32 clamp_s_diff[8];
 CVtcmaskDERIVATIVE cvarray[0x100];
+UINT8 oldhb[8];
+int last_overwriting_scanline;
 
 #define RDRAM_MASK 0x00ffffff
 
@@ -582,26 +602,8 @@ CVtcmaskDERIVATIVE cvarray[0x100];
 	else {(rdst) = (hdst) = 0;} \
 }
 
-#define PAIRWRITE16(in, rval, hval) \
-{ \
-	(in) &= (RDRAM_MASK >> 1); \
-	if ((in) <= idxlim16) {rdram_16[(in) ^ WORD_ADDR_XOR] = (rval); hidden_bits[(in)] = (hval);} \
-}
-
-#define PAIRWRITE32(in, rval, hval0, hval1) \
-{ \
-	(in) &= (RDRAM_MASK >> 2); \
-	if ((in) <= idxlim32) {rdram[(in)] = (rval); hidden_bits[(in) << 1] = (hval0); hidden_bits[((in) << 1) + 1] = (hval1);} \
-}
-
-#define PAIRWRITE8(in, rval) \
-{ \
-	(in) &= RDRAM_MASK; \
-	if ((in) <= plim) {if ((in) & 1) hidden_bits[(in) >> 1] = ((rval) & 1) ? 3 : 0; rdram_8[(in) ^ BYTE_ADDR_XOR] = (rval); } \
-}
-
 struct onetime {
-	int nolerp, copymstrangecrashes, fillmcrashes, fillmbitcrashes, syncfullcrash, vbusclock;
+	int copymstrangecrashes, fillmcrashes, fillmbitcrashes, syncfullcrash, vbusclock;
 } onetimewarnings;
 
 extern INT32 pitchindwords;
@@ -941,6 +943,7 @@ int rdp_init()
 
 	memset(&memory_color, 0, sizeof(COLOR));
 	memset(&pre_memory_color, 0, sizeof(COLOR));
+	memset(&oldhb, 0, sizeof(oldhb));
 
 	rdp_pipeline_crashed = 0;
 	memset(&onetimewarnings, 0, sizeof(onetimewarnings));
@@ -1019,11 +1022,9 @@ int rdp_update()
 
 	UINT32 x_add = vi_x_scale & 0xfff;
 
-	if (!lerp_en && vitype == 2 && !onetimewarnings.nolerp && h_start < 0x80 && x_add <= 0x200)
-	{
-		popmessage("Disabling VI interpolation in 16-bit color modes causes glitches on hardware if h_start is less than 128 pixels and x_scale is less or equal to 0x200.");
-		onetimewarnings.nolerp = 1;
-	}
+	int vinnglitch = 0;
+	if (!lerp_en && (vitype & 2) &&  h_start < (vitype == 2 ? 0x80 : 0x40) && x_add <= 0x200)
+		vinnglitch = vitype == 2 ? 0x40 : 0x20;
 
 	h_start -= (ispal ? 128 : 108);
 
@@ -1069,10 +1070,11 @@ int rdp_update()
 	{
 		prevserrate = 1;
 		prevvicurrent = vi_v_current_line & 1;
-		oldvstart = v_start;
 	}
 	else
 		prevserrate = 0;
+
+	oldvstart = v_start;
 
 	int linecount = serration_pulses ? (pitchindwords << 1) : pitchindwords;
 	int lineshifter = serration_pulses ? 0 : 1;
@@ -1448,6 +1450,26 @@ int rdp_update()
 							vi_vl_lerp(&color, scancolor, yfrac);
 							vi_vl_lerp(&nextcolor, scannextcolor, yfrac);
 							vi_vl_lerp(&color, nextcolor, xfrac);
+						}
+						else if (vinnglitch)
+						{
+							if (prev_line_x & vinnglitch)
+								color.r = color.g = color.b = 0;
+							else
+							{
+								cur_x = pixels + (prev_line_x & (vinnglitch - 1));
+								vi_fetch_filter_ptr(&color, frame_buffer, cur_x, fsaa, dither_filter, vres, 0);
+
+								if (divot)
+								{
+									CCVG prevcol, nextcol;
+									prev_x = pixels + ((prev_line_x - 1) & (vinnglitch - 1));
+									next_x = pixels + (line_x & (vinnglitch - 1));
+									vi_fetch_filter_ptr(&prevcol, frame_buffer, prev_x, fsaa, dither_filter, vres, 0);
+									vi_fetch_filter_ptr(&nextcol, frame_buffer, next_x, fsaa, dither_filter, vres, 0);
+									divot_filter(&color, color, prevcol, nextcol);
+								}
+							}
 						}
 
 						r = color.r;
@@ -2225,9 +2247,31 @@ STRICTINLINE int blender_2cycle_cycle0(UINT32 curpixel_cvg, UINT32 curpixel_cvbi
 		blended_pixel_color.b = b;
 	}
 
-	memory_color = pre_memory_color;
-
 	return wen;
+}
+
+STRICTINLINE void blender_2cycle_cycle0_gval(UINT32 curpixel)
+{
+	int g, fbsel;
+	UINT32 fb;
+
+	fbsel = fb_size;
+
+	if (fb_size == PIXEL_SIZE_8BIT)
+	{
+		fb = fb_address + curpixel;
+		if (!(fb & 1))
+			fbsel--;
+	}
+
+	if (fbsel & 1)
+	{
+		inv_pixel_color.a =  (~(*blender1b_a[0])) & 0xff;
+
+		blender_equation_cycle0_2_gval(&g);
+
+		blended_pixel_color.g = g;
+	}
 }
 
 STRICTINLINE void blender_2cycle_cycle1(UINT32* fr, UINT32* fg, UINT32* fb, int dith, UINT32 blend_en, UINT32 prewrap)
@@ -4748,6 +4792,8 @@ void render_spans_1cycle_complete(int start, int end, int tilenum, int flip)
 	int curpixel = 0;
 	int x, length, scdiff, lodlength;
 	UINT32 fir, fig, fib;
+	int delayedhbwidx = -1;
+	int wen;
 
 	for (i = start; i <= end; i++)
 	{
@@ -4854,15 +4900,19 @@ void render_spans_1cycle_complete(int start, int end, int tilenum, int flip)
 				combiner_1cycle(adith, &curpixel_cvg);
 
 				fbread1_ptr(curpixel, &curpixel_memcvg);
-				if (z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg))
+				wen = z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg);
+
+				if (wen)
+					wen = blender_1cycle(&fir, &fig, &fib, cdith, blend_en, prewrap, curpixel_cvg, curpixel_cvbit);
+
+				if (wen)
 				{
-					if (blender_1cycle(&fir, &fig, &fib, cdith, blend_en, prewrap, curpixel_cvg, curpixel_cvbit))
-					{
-						fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg);
-						if (other_modes.z_update_en)
-							z_store(zbcur, sz, dzpixenc);
-					}
+					fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+					if (other_modes.z_update_en)
+						z_store(zbcur, sz, dzpixenc);
 				}
+				else if (i >= last_overwriting_scanline)
+					rejected_hbwrite_1cycle(cdith, blend_en, prewrap, curpixel, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
 
 				r += drinc;
 				g += dginc;
@@ -4876,6 +4926,9 @@ void render_spans_1cycle_complete(int start, int end, int tilenum, int flip)
 			}
 		}
 	}
+
+	if (delayedhbwidx >= 0 && flip && fb_size == PIXEL_SIZE_8BIT)
+		complete_delayed_hbwrites(delayedhbwidx);
 }
 
 void render_spans_1cycle_notexel1(int start, int end, int tilenum, int flip)
@@ -4938,6 +4991,9 @@ void render_spans_1cycle_notexel1(int start, int end, int tilenum, int flip)
 	int curpixel = 0;
 	int x, length, scdiff, lodlength;
 	UINT32 fir, fig, fib;
+
+	int delayedhbwidx = -1;
+	int wen;
 
 	for (i = start; i <= end; i++)
 	{
@@ -5022,15 +5078,19 @@ void render_spans_1cycle_notexel1(int start, int end, int tilenum, int flip)
 
 				fbread1_ptr(curpixel, &curpixel_memcvg);
 
-				if (z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg))
+				wen = z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg);
+
+				if (wen)
+					wen = blender_1cycle(&fir, &fig, &fib, cdith, blend_en, prewrap, curpixel_cvg, curpixel_cvbit);
+
+				if (wen)
 				{
-					if (blender_1cycle(&fir, &fig, &fib, cdith, blend_en, prewrap, curpixel_cvg, curpixel_cvbit))
-					{
-						fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg);
-						if (other_modes.z_update_en)
-							z_store(zbcur, sz, dzpixenc);
-					}
+					fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+					if (other_modes.z_update_en)
+						z_store(zbcur, sz, dzpixenc);
 				}
+				else if (i >= last_overwriting_scanline)
+					rejected_hbwrite_1cycle(cdith, blend_en, prewrap, curpixel, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
 
 				s += dsinc;
 				t += dtinc;
@@ -5047,6 +5107,9 @@ void render_spans_1cycle_notexel1(int start, int end, int tilenum, int flip)
 			}
 		}
 	}
+
+	if (delayedhbwidx >= 0 && flip && fb_size == PIXEL_SIZE_8BIT)
+		complete_delayed_hbwrites(delayedhbwidx);
 }
 
 void render_spans_1cycle_notex(int start, int end, int tilenum, int flip)
@@ -5099,6 +5162,8 @@ void render_spans_1cycle_notex(int start, int end, int tilenum, int flip)
 	int curpixel = 0;
 	int x, length, scdiff;
 	UINT32 fir, fig, fib;
+	int delayedhbwidx = -1;
+	int wen;
 
 	for (i = start; i <= end; i++)
 	{
@@ -5159,15 +5224,21 @@ void render_spans_1cycle_notex(int start, int end, int tilenum, int flip)
 				combiner_1cycle(adith, &curpixel_cvg);
 
 				fbread1_ptr(curpixel, &curpixel_memcvg);
-				if (z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg))
+
+				wen = z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg);
+
+				if (wen)
+					wen = blender_1cycle(&fir, &fig, &fib, cdith, blend_en, prewrap, curpixel_cvg, curpixel_cvbit);
+
+				if (wen)
 				{
-					if (blender_1cycle(&fir, &fig, &fib, cdith, blend_en, prewrap, curpixel_cvg, curpixel_cvbit))
-					{
-						fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg);
-						if (other_modes.z_update_en)
-							z_store(zbcur, sz, dzpixenc);
-					}
+					fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+					if (other_modes.z_update_en)
+						z_store(zbcur, sz, dzpixenc);
 				}
+				else if (i >= last_overwriting_scanline)
+					rejected_hbwrite_1cycle(cdith, blend_en, prewrap, curpixel, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+
 				r += drinc;
 				g += dginc;
 				b += dbinc;
@@ -5180,6 +5251,9 @@ void render_spans_1cycle_notex(int start, int end, int tilenum, int flip)
 			}
 		}
 	}
+
+	if (delayedhbwidx >= 0 && flip && fb_size == PIXEL_SIZE_8BIT)
+		complete_delayed_hbwrites(delayedhbwidx);
 }
 
 void render_spans_2cycle_complete(int start, int end, int tilenum, int flip)
@@ -5250,6 +5324,7 @@ void render_spans_2cycle_complete(int start, int end, int tilenum, int flip)
 
 	int x, length, scdiff, lodlength;
 	UINT32 fir, fig, fib;
+	int delayedhbwidx = -1;
 
 	for (i = start; i <= end; i++)
 	{
@@ -5372,9 +5447,12 @@ void render_spans_2cycle_complete(int start, int end, int tilenum, int flip)
 				wen = z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg);
 
 				if (wen)
-					wen &= blender_2cycle_cycle0(curpixel_cvg, curpixel_cvbit);
-				else
-					memory_color = pre_memory_color;
+					wen = blender_2cycle_cycle0(curpixel_cvg, curpixel_cvbit);
+
+				if (!wen && i >= last_overwriting_scanline)
+					blender_2cycle_cycle0_gval(curpixel);
+
+				memory_color = pre_memory_color;
 
 				x += xinc;
 
@@ -5399,17 +5477,18 @@ void render_spans_2cycle_complete(int start, int end, int tilenum, int flip)
 				combiner_2cycle_cycle0(adith, nextpixel_cvg, &acalpha);
 
 				if (wen)
-				{
-					wen &= alpha_compare(acalpha);
+					wen = alpha_compare(acalpha);
 
-					if (wen)
-					{
-						blender_2cycle_cycle1(&fir, &fig, &fib, cdith, blend_en, prewrap);
-						fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg);
-						if (other_modes.z_update_en)
-							z_store(zbcur, sz, dzpixenc);
-					}
+				if (wen)
+				{
+					blender_2cycle_cycle1(&fir, &fig, &fib, cdith, blend_en, prewrap);
+					fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+					if (other_modes.z_update_en)
+						z_store(zbcur, sz, dzpixenc);
 				}
+				else if (i >= last_overwriting_scanline)
+					rejected_hbwrite_2cycle(cdith, blend_en, prewrap, curpixel, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+
 
 				if (other_modes.f.getditherlevel < 2)
 					get_dither_noise(x, i, &cdith, &adith);
@@ -5423,6 +5502,9 @@ void render_spans_2cycle_complete(int start, int end, int tilenum, int flip)
 			}
 		}
 	}
+
+	if (delayedhbwidx >= 0 && flip && fb_size == PIXEL_SIZE_8BIT)
+		complete_delayed_hbwrites(delayedhbwidx);
 }
 
 static void render_spans_2cycle_notexelnext(int start, int end, int tilenum, int flip)
@@ -5490,6 +5572,7 @@ static void render_spans_2cycle_notexelnext(int start, int end, int tilenum, int
 
 	int x, length, scdiff;
 	UINT32 fir, fig, fib;
+	int delayedhbwidx = -1;
 
 	for (i = start; i <= end; i++)
 	{
@@ -5577,9 +5660,12 @@ static void render_spans_2cycle_notexelnext(int start, int end, int tilenum, int
 				wen = z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg);
 
 				if (wen)
-					wen &= blender_2cycle_cycle0(curpixel_cvg, curpixel_cvbit);
-				else
-					memory_color = pre_memory_color;
+					wen = blender_2cycle_cycle0(curpixel_cvg, curpixel_cvbit);
+
+				if (!wen && i >= last_overwriting_scanline)
+					blender_2cycle_cycle0_gval(curpixel);
+
+				memory_color = pre_memory_color;
 
 				x += xinc;
 
@@ -5613,17 +5699,17 @@ static void render_spans_2cycle_notexelnext(int start, int end, int tilenum, int
 				combiner_2cycle_cycle0(adith, nextpixel_cvg, &acalpha);
 
 				if (wen)
-				{
-					wen &= alpha_compare(acalpha);
+					wen = alpha_compare(acalpha);
 
-					if (wen)
-					{
-						blender_2cycle_cycle1(&fir, &fig, &fib, cdith, blend_en, prewrap);
-						fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg);
-						if (other_modes.z_update_en)
-							z_store(zbcur, sz, dzpixenc);
-					}
+				if (wen)
+				{
+					blender_2cycle_cycle1(&fir, &fig, &fib, cdith, blend_en, prewrap);
+					fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+					if (other_modes.z_update_en)
+						z_store(zbcur, sz, dzpixenc);
 				}
+				else if (i >= last_overwriting_scanline)
+					rejected_hbwrite_2cycle(cdith, blend_en, prewrap, curpixel, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
 
 				if (other_modes.f.getditherlevel < 2)
 					get_dither_noise(x, i, &cdith, &adith);
@@ -5637,6 +5723,9 @@ static void render_spans_2cycle_notexelnext(int start, int end, int tilenum, int
 			}
 		}
 	}
+
+	if (delayedhbwidx >= 0 && flip && fb_size == PIXEL_SIZE_8BIT)
+		complete_delayed_hbwrites(delayedhbwidx);
 }
 
 static void render_spans_2cycle_notexel1(int start, int end, int tilenum, int flip)
@@ -5703,6 +5792,7 @@ static void render_spans_2cycle_notexel1(int start, int end, int tilenum, int fl
 
 	int x, length, scdiff;
 	UINT32 fir, fig, fib;
+	int delayedhbwidx = -1;
 
 	for (i = start; i <= end; i++)
 	{
@@ -5789,9 +5879,12 @@ static void render_spans_2cycle_notexel1(int start, int end, int tilenum, int fl
 				wen = z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg);
 
 				if (wen)
-					wen &= blender_2cycle_cycle0(curpixel_cvg, curpixel_cvbit);
-				else
-					memory_color = pre_memory_color;
+					wen = blender_2cycle_cycle0(curpixel_cvg, curpixel_cvbit);
+
+				if (!wen && i >= last_overwriting_scanline)
+					blender_2cycle_cycle0_gval(curpixel);
+
+				memory_color = pre_memory_color;
 
 				x += xinc;
 
@@ -5824,17 +5917,18 @@ static void render_spans_2cycle_notexel1(int start, int end, int tilenum, int fl
 				combiner_2cycle_cycle0(adith, nextpixel_cvg, &acalpha);
 
 				if (wen)
-				{
-					wen &= alpha_compare(acalpha);
+					wen = alpha_compare(acalpha);
 
-					if (wen)
-					{
-						blender_2cycle_cycle1(&fir, &fig, &fib, cdith, blend_en, prewrap);
-						fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg);
-						if (other_modes.z_update_en)
-							z_store(zbcur, sz, dzpixenc);
-					}
+				if (wen)
+				{
+					blender_2cycle_cycle1(&fir, &fig, &fib, cdith, blend_en, prewrap);
+					fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+					if (other_modes.z_update_en)
+						z_store(zbcur, sz, dzpixenc);
 				}
+				else if (i >= last_overwriting_scanline)
+					rejected_hbwrite_2cycle(cdith, blend_en, prewrap, curpixel, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+
 
 				if (other_modes.f.getditherlevel < 2)
 					get_dither_noise(x, i, &cdith, &adith);
@@ -5848,6 +5942,9 @@ static void render_spans_2cycle_notexel1(int start, int end, int tilenum, int fl
 			}
 		}
 	}
+
+	if (delayedhbwidx >= 0 && flip && fb_size == PIXEL_SIZE_8BIT)
+		complete_delayed_hbwrites(delayedhbwidx);
 }
 
 static void render_spans_2cycle_notex(int start, int end, int tilenum, int flip)
@@ -5904,6 +6001,7 @@ static void render_spans_2cycle_notex(int start, int end, int tilenum, int flip)
 
 	int x, length, scdiff;
 	UINT32 fir, fig, fib;
+	int delayedhbwidx = -1;
 
 	for (i = start; i <= end; i++)
 	{
@@ -5975,9 +6073,12 @@ static void render_spans_2cycle_notex(int start, int end, int tilenum, int flip)
 				wen = z_compare(zbcur, sz, dzpix, dzpixenc, &blend_en, &prewrap, &curpixel_cvg, curpixel_memcvg);
 
 				if (wen)
-					wen &= blender_2cycle_cycle0(curpixel_cvg, curpixel_cvbit);
-				else
-					memory_color = pre_memory_color;
+					wen = blender_2cycle_cycle0(curpixel_cvg, curpixel_cvbit);
+
+				if (!wen && i >= last_overwriting_scanline)
+					blender_2cycle_cycle0_gval(curpixel);
+
+				memory_color = pre_memory_color;
 
 				x += xinc;
 
@@ -5998,17 +6099,18 @@ static void render_spans_2cycle_notex(int start, int end, int tilenum, int flip)
 				combiner_2cycle_cycle0(adith, nextpixel_cvg, &acalpha);
 
 				if (wen)
-				{
-					wen &= alpha_compare(acalpha);
+					wen = alpha_compare(acalpha);
 
-					if (wen)
-					{
-						blender_2cycle_cycle1(&fir, &fig, &fib, cdith, blend_en, prewrap);
-						fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg);
-						if (other_modes.z_update_en)
-							z_store(zbcur, sz, dzpixenc);
-					}
+				if (wen)
+				{
+					blender_2cycle_cycle1(&fir, &fig, &fib, cdith, blend_en, prewrap);
+					fbwrite_ptr(curpixel, fir, fig, fib, blend_en, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+					if (other_modes.z_update_en)
+						z_store(zbcur, sz, dzpixenc);
 				}
+				else if (i >= last_overwriting_scanline)
+					rejected_hbwrite_2cycle(cdith, blend_en, prewrap, curpixel, curpixel_cvg, curpixel_memcvg, flip, &delayedhbwidx);
+
 
 				if (other_modes.f.getditherlevel < 2)
 					get_dither_noise(x, i, &cdith, &adith);
@@ -6022,6 +6124,9 @@ static void render_spans_2cycle_notex(int start, int end, int tilenum, int flip)
 			}
 		}
 	}
+
+	if (delayedhbwidx >= 0 && flip && fb_size == PIXEL_SIZE_8BIT)
+		complete_delayed_hbwrites(delayedhbwidx);
 }
 
 void render_spans_fill(int start, int end, int flip)
@@ -6042,6 +6147,7 @@ void render_spans_fill(int start, int end, int flip)
 	int xstart = 0, xendsc;
 	int curpixel = 0;
 	int x, length;
+	int delayedhbwidx = -1;
 
 	for (i = start; i <= end; i++)
 	{
@@ -6066,22 +6172,7 @@ void render_spans_fill(int start, int end, int flip)
 
 			for (j = 0; j <= length; j++)
 			{
-				switch(fb_size)
-				{
-				case 0:
-					fbfill_4(curpixel);
-					break;
-				case 1:
-					fbfill_8(curpixel);
-					break;
-				case 2:
-					fbfill_16(curpixel);
-					break;
-				case 3:
-				default:
-					fbfill_32(curpixel);
-					break;
-				}
+				fbfill_ptr(curpixel, flip, &delayedhbwidx);
 
 				x += xinc;
 				curpixel += xinc;
@@ -6098,6 +6189,9 @@ void render_spans_fill(int start, int end, int flip)
 			}
 		}
 	}
+
+	if (delayedhbwidx >= 0 && flip && fb_size == PIXEL_SIZE_8BIT)
+		complete_delayed_hbwrites(delayedhbwidx);
 }
 
 void render_spans_copy(int start, int end, int tilenum, int flip)
@@ -6144,6 +6238,7 @@ void render_spans_copy(int start, int end, int tilenum, int flip)
 	int bytesperpixel = (fb_size == PIXEL_SIZE_4BIT) ? 1 : (1 << (fb_size - 1));
 	UINT32 fbendptr = 0;
 	INT32 threshold, currthreshold;
+	int delayedhbwidx = -1;
 
 #define PIXELS_TO_BYTES_SPECIAL4(pix, siz) ((siz) ? PIXELS_TO_BYTES(pix, siz) : (pix))
 
@@ -6226,9 +6321,8 @@ void render_spans_copy(int start, int end, int tilenum, int flip)
 				{
 					tempbyte = (UINT32)((copyqword >> (k << 3)) & 0xff);
 					if (alphamask & (1 << k))
-					{
-						PAIRWRITE8(tempdword, tempbyte);
-					}
+						pairwrite8(tempdword, tempbyte, flip, &delayedhbwidx);
+
 					k--;
 					tempdword += xinc;
 					copywmask--;
@@ -6241,6 +6335,9 @@ void render_spans_copy(int start, int end, int tilenum, int flip)
 			}
 		}
 	}
+
+	if (delayedhbwidx >= 0 && flip && fb_size == PIXEL_SIZE_8BIT)
+		complete_delayed_hbwrites(delayedhbwidx);
 }
 
 void loading_pipeline(int start, int end, int tilenum, int coord_quad, int ltlut)
@@ -6499,6 +6596,15 @@ static void edgewalker_for_prims(INT32* ewdata)
 		deduce_derivatives();
 		other_modes.f.stalederivs = 0;
 	}
+
+	if (fb_size == PIXEL_SIZE_8BIT)
+	{
+		oldhb[0] &= ~2;
+		oldhb[4] &= ~2;
+	}
+
+	int oldhb_diff = fb_size == PIXEL_SIZE_16BIT ? 7 : 3;
+	last_overwriting_scanline = -1;
 
 	flip = (ewdata[0] & 0x800000) ? 1 : 0;
 	max_level = (ewdata[0] >> 19) & 7;
@@ -6791,6 +6897,10 @@ static void edgewalker_for_prims(INT32* ewdata)
 					span[j].lx = maxxmx;
 					span[j].rx = minxhx;
 					span[j].validline  = !allinval && !allover && !allunder && (!scfield || (scfield && !(sckeepodd ^ (j & 1))));
+
+					if (span[j].validline && fb_size > PIXEL_SIZE_8BIT)
+						if ((span[j].lx - span[j].rx) >= oldhb_diff)
+							last_overwriting_scanline = j;
 				}
 			}
 
@@ -6872,6 +6982,10 @@ static void edgewalker_for_prims(INT32* ewdata)
 					span[j].lx = minxmx;
 					span[j].rx = maxxhx;
 					span[j].validline  = !allinval && !allover && !allunder && (!scfield || (scfield && !(sckeepodd ^ (j & 1))));
+
+					if (span[j].validline && fb_size > PIXEL_SIZE_8BIT)
+						if ((span[j].rx - span[j].lx) >= oldhb_diff)
+							last_overwriting_scanline = j;
 				}
 			}
 
@@ -8019,6 +8133,7 @@ static void rdp_set_color_image(UINT32 w1, UINT32 w2)
 	fbread1_ptr = fbread_func[fb_size];
 	fbread2_ptr = fbread2_func[fb_size];
 	fbwrite_ptr = fbwrite_func[fb_size];
+	fbfill_ptr = fbfill_func[fb_size];
 }
 
 static void (*const rdp_command_table[64])(UINT32 w1, UINT32 w2) =
@@ -8210,6 +8325,33 @@ STRICTINLINE void blender_equation_cycle0(int* r, int* g, int* b)
 	}
 }
 
+STRICTINLINE void blender_equation_cycle0_gval(int* g)
+{
+	int blend1a, blend2a;
+	int blg, sum;
+	blend1a = *blender1b_a[0] >> 3;
+	blend2a = *blender2b_a[0] >> 3;
+
+	int mulb;
+	if (blender2b_a[0] == &memory_color.a)
+	{
+		blend1a = (blend1a >> blshifta) & 0x3C;
+		blend2a = (blend2a >> blshiftb) | 3;
+	}
+
+	mulb = blend2a + 1;
+
+	blg = (*blender1a_g[0]) * blend1a + (*blender2a_g[0]) * mulb;
+
+	if (!other_modes.force_blend)
+	{
+		sum = ((blend1a & ~3) + (blend2a & ~3) + 4) << 9;
+		*g = bldiv_hwaccurate_table[sum | ((blg >> 2) & 0x7ff)];
+	}
+	else
+		*g = (blg >> 5) & 0xff;
+}
+
 STRICTINLINE void blender_equation_cycle0_2(int* r, int* g, int* b)
 {
 	int blend1a, blend2a;
@@ -8226,6 +8368,22 @@ STRICTINLINE void blender_equation_cycle0_2(int* r, int* g, int* b)
 	*r = (((*blender1a_r[0]) * blend1a + (*blender2a_r[0]) * blend2a) >> 5) & 0xff;
 	*g = (((*blender1a_g[0]) * blend1a + (*blender2a_g[0]) * blend2a) >> 5) & 0xff;
 	*b = (((*blender1a_b[0]) * blend1a + (*blender2a_b[0]) * blend2a) >> 5) & 0xff;
+}
+
+STRICTINLINE void blender_equation_cycle0_2_gval(int* g)
+{
+	int blend1a, blend2a;
+	blend1a = *blender1b_a[0] >> 3;
+	blend2a = *blender2b_a[0] >> 3;
+
+	if (blender2b_a[0] == &memory_color.a)
+	{
+		blend1a = (blend1a >> pastblshifta) & 0x3C;
+		blend2a = (blend2a >> pastblshiftb) | 3;
+	}
+
+	blend2a += 1;
+	*g = (((*blender1a_g[0]) * blend1a + (*blender2a_g[0]) * blend2a) >> 5) & 0xff;
 }
 
 STRICTINLINE void blender_equation_cycle1(int* r, int* g, int* b)
@@ -8260,6 +8418,32 @@ STRICTINLINE void blender_equation_cycle1(int* r, int* g, int* b)
 		*g = (blg >> 5) & 0xff;
 		*b = (blb >> 5) & 0xff;
 	}
+}
+
+STRICTINLINE void blender_equation_cycle1_gval(int* g)
+{
+	int blend1a, blend2a;
+	int blg, sum;
+	blend1a = *blender1b_a[1] >> 3;
+	blend2a = *blender2b_a[1] >> 3;
+
+	int mulb;
+	if (blender2b_a[1] == &memory_color.a)
+	{
+		blend1a = (blend1a >> blshifta) & 0x3C;
+		blend2a = (blend2a >> blshiftb) | 3;
+	}
+
+	mulb = blend2a + 1;
+	blg = (*blender1a_g[1]) * blend1a + (*blender2a_g[1]) * mulb;
+
+	if (!other_modes.force_blend)
+	{
+		sum = ((blend1a & ~3) + (blend2a & ~3) + 4) << 9;
+		*g = bldiv_hwaccurate_table[sum | ((blg >> 2) & 0x7ff)];
+	}
+	else
+		*g = (blg >> 5) & 0xff;
 }
 
 STRICTINLINE UINT32 rightcvghex(UINT32 x, UINT32 fmask)
@@ -8412,19 +8596,19 @@ int rdp_close()
 	return 0;
 }
 
-INLINE void fbwrite_4(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg)
+INLINE void fbwrite_4(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx)
 {
 	UINT32 fb = fb_address + curpixel;
 	RWRITEADDR8(fb, 0);
 }
 
-INLINE void fbwrite_8(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg)
+INLINE void fbwrite_8(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx)
 {
 	UINT32 fb = fb_address + curpixel;
-	PAIRWRITE8(fb, (fb & 1) ? (g & 0xff) : (r & 0xff));
+	pairwrite8(fb, (fb & 1) ? (g & 0xff) : (r & 0xff), flip, delayedhbwidx);
 }
 
-INLINE void fbwrite_16(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg)
+INLINE void fbwrite_16(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx)
 {
 #undef CVG_DRAW
 #ifdef CVG_DRAW
@@ -8452,10 +8636,10 @@ INLINE void fbwrite_16(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 ble
 
 	rval = finalcolor|(finalcvg >> 2);
 	hval = finalcvg & 3;
-	PAIRWRITE16(fb, rval, hval);
+	pairwrite16(fb, rval, hval, 1);
 }
 
-INLINE void fbwrite_32(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg)
+INLINE void fbwrite_32(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 blend_en, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx)
 {
 	UINT32 fb = (fb_address >> 2) + curpixel;
 
@@ -8464,23 +8648,22 @@ INLINE void fbwrite_32(UINT32 curpixel, UINT32 r, UINT32 g, UINT32 b, UINT32 ble
 
 	finalcolor = (r << 24) | (g << 16) | (b << 8);
 	finalcolor |= (finalcvg << 5);
-
-	PAIRWRITE32(fb, finalcolor, (g & 1) ? 3 : 0, 0);
+	pairwrite32(fb, finalcolor, (g & 1) ? 3 : 0, 0);
 }
 
-INLINE void fbfill_4(UINT32 curpixel)
+INLINE void fbfill_4(UINT32 curpixel, int flip, int* delayedhbwidx)
 {
 	rdp_pipeline_crashed = 1;
 }
 
-INLINE void fbfill_8(UINT32 curpixel)
+INLINE void fbfill_8(UINT32 curpixel, int flip, int* delayedhbwidx)
 {
 	UINT32 fb = fb_address + curpixel;
 	UINT32 val = (fill_color >> (((fb & 3) ^ 3) << 3)) & 0xff;
-	PAIRWRITE8(fb, val);
+	pairwrite8(fb, val, flip, delayedhbwidx);
 }
 
-INLINE void fbfill_16(UINT32 curpixel)
+INLINE void fbfill_16(UINT32 curpixel, int flip, int* delayedhbwidx)
 {
 	UINT16 val;
 	UINT8 hval;
@@ -8490,13 +8673,13 @@ INLINE void fbfill_16(UINT32 curpixel)
 	else
 		val = (fill_color >> 16) & 0xffff;
 	hval = ((val & 1) << 1) | (val & 1);
-	PAIRWRITE16(fb, val, hval);
+	pairwrite16(fb, val, hval, 1);
 }
 
-INLINE void fbfill_32(UINT32 curpixel)
+INLINE void fbfill_32(UINT32 curpixel, int flip, int* delayedhbwidx)
 {
 	UINT32 fb = (fb_address >> 2) + curpixel;
-	PAIRWRITE32(fb, fill_color, (fill_color & 0x10000) ? 3 : 0, (fill_color & 0x1) ? 3 : 0);
+	pairwrite32(fb, fill_color, (fill_color & 0x10000) ? 3 : 0, (fill_color & 0x1) ? 3 : 0);
 }
 
 INLINE void fbread_4(UINT32 curpixel, UINT32* curpixel_memcvg)
@@ -8866,7 +9049,7 @@ STRICTINLINE void z_store(UINT32 zcurpixel, UINT32 z, int dzpixenc)
 	UINT16 zval = z_com_table[z & 0x3ffff]|(dzpixenc >> 2);
 	UINT8 hval = dzpixenc & 3;
 
-	PAIRWRITE16(zcurpixel, zval, hval);
+	pairwrite16(zcurpixel, zval, hval, 0);
 }
 
 STRICTINLINE UINT32 dz_decompress(UINT32 dz_compressed)
@@ -9073,6 +9256,280 @@ STRICTINLINE INT32 normalize_dzpix(INT32 sum)
 	}
 	fatalerror("normalize_dzpix: invalid codepath taken");
 	return 0;
+}
+
+STRICTINLINE void pairwrite8(UINT32 in, UINT32 rval, int flip, int* delayedhbwidx)
+{
+	in &= RDRAM_MASK;
+	if (!flip)
+	{
+		if (in <= plim)
+		{
+			int hdst8 = hidden_bits[in >> 1];
+
+			if (!(in & 1))
+			{
+				if (hdst8 & HB_CLEAN)
+					hidden_bits[in >> 1] = (rdram_16[(in >> 1) ^ WORD_ADDR_XOR] & 1) ? 1 : 0;
+				else
+					hidden_bits[in >> 1] &= ~2;
+
+				hidden_bits[in >> 1] |= oldhb[(in >> 1) & 7] & 2;
+			}
+			else
+			{
+				if (hdst8 & HB_CLEAN)
+					hidden_bits[in >> 1] = (rdram_16[(in >> 1) ^ WORD_ADDR_XOR] & 1) ? 2 : 0;
+				else
+					hidden_bits[in >> 1] &= ~1;
+
+				hidden_bits[in >> 1] |= rval & 1;
+			}
+			rdram_8[in ^ BYTE_ADDR_XOR] = rval;
+		}
+
+		if (in & 1)
+		{
+			oldhb[(in >> 1) & 7] = (rval & 1) ? 3 : 0;
+		}
+	}
+	else
+	{
+		if (*delayedhbwidx >= 0 && (UINT32)*delayedhbwidx < in)
+		{
+			if ((UINT32)*delayedhbwidx <= plim)
+			{
+				int oldhbidx = *delayedhbwidx >> 1;
+
+				hidden_bits[oldhbidx] &= ~2;
+				hidden_bits[oldhbidx] |= oldhb[oldhbidx & 7] & 2;
+			}
+
+			*delayedhbwidx = -1;
+		}
+
+		if (in  & 1)
+		{
+			if (in <= plim)
+			{
+				if (*delayedhbwidx >= 0)
+					hidden_bits[in >> 1] = (rval & 1) ? 3 : 0;
+				else
+				{
+					int hdst8 = hidden_bits[in >> 1];
+					if (hdst8 & HB_CLEAN)
+						hidden_bits[in >> 1] = (rdram_16[(in >> 1) ^ WORD_ADDR_XOR] & 1) ? 2 : 0;
+					else
+						hidden_bits[in >> 1] &= ~1;
+
+					hidden_bits[in >> 1] |= rval & 1;
+				}
+
+				rdram_8[in ^ BYTE_ADDR_XOR] = rval;
+			}
+
+			oldhb[(in >> 1) & 7] = (rval & 1) ? 3 : 0;
+			*delayedhbwidx = -1;
+		}
+		else
+		{
+			if (in <= plim)
+			{
+				int hdst8 = hidden_bits[in >> 1];
+				if (hdst8 & HB_CLEAN)
+					hidden_bits[in >> 1] = (rdram_16[(in >> 1) ^ WORD_ADDR_XOR] & 1) ? 3 : 0;
+
+				rdram_8[in ^ BYTE_ADDR_XOR] = rval;
+			}
+
+			*delayedhbwidx = in + 1;
+		}
+	}
+}
+
+STRICTINLINE void pairwrite16(UINT32 in, UINT16 rval, UINT8 hval, int iscolor)
+{
+	in &= (RDRAM_MASK >> 1);
+	if (in <= idxlim16)
+	{
+		rdram_16[in ^ WORD_ADDR_XOR] = rval;
+		hidden_bits[in] = hval;
+	}
+
+	if (iscolor)
+	{
+		oldhb[in & 7] = hval;
+	}
+}
+
+STRICTINLINE void pairwrite32(UINT32 in, INT32 cval, UINT8 hval0, UINT8 hval1)
+{
+	in &= (RDRAM_MASK >> 2);
+	if (in <= idxlim32)
+	{
+		rdram[in] = cval;
+		hidden_bits[in << 1] = hval0;
+		hidden_bits[(in << 1) + 1] = hval1;
+	}
+
+	oldhb[(in << 1) & 7] = hval0;
+	oldhb[((in << 1) + 1) & 7] = hval1;
+}
+
+void rejected_hbwrite_1cycle(int cdith, UINT32 blend_en, UINT32 prewrap, UINT32 curpixel, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx)
+{
+	int g, dontblend, gval;
+	UINT32 fb;
+	INT32 hval = 0;
+	int fbsel = fb_size;
+
+	if (fb_size == PIXEL_SIZE_8BIT)
+	{
+		fb = fb_address + curpixel;
+		if (!(fb & 1))
+			fbsel--;
+	}
+
+	if (fbsel & 1)
+	{
+		if (!other_modes.color_on_cvg || prewrap)
+		{
+			dontblend = (other_modes.f.partialreject_1cycle && pixel_color.a >= 0xff);
+			if (!blend_en || dontblend)
+				g = *blender1a_g[0];
+			else
+			{
+				inv_pixel_color.a =  (~(*blender1b_a[0])) & 0xff;
+
+				blender_equation_cycle0_gval(&g);
+			}
+		}
+		else
+			g = *blender2a_g[0];
+
+		if (other_modes.rgb_dither_sel != 3)
+			rgb_dither_gval(&g, cdith);
+
+		gval = (g & 1) ? 3 : 0;
+	}
+
+	switch (fbsel)
+	{
+	case PIXEL_SIZE_4BIT:
+		break;
+	case PIXEL_SIZE_8BIT:
+		if (flip && *delayedhbwidx >= 0)
+		{
+			if ((UINT32)*delayedhbwidx < fb)
+			{
+				if ((UINT32)*delayedhbwidx <= plim)
+				{
+					int oldhbidx = *delayedhbwidx >> 1;
+					hidden_bits[oldhbidx] &= ~2;
+					hidden_bits[oldhbidx] |= oldhb[oldhbidx & 7] & 2;
+				}
+			}
+			else if (fb <= plim)
+			{
+				hidden_bits[fb >> 1] &= ~2;
+				hidden_bits[fb >> 1] |= gval & 2;
+			}
+
+			*delayedhbwidx = -1;
+		}
+
+		oldhb[(fb >> 1) & 7] = gval;
+		break;
+	case PIXEL_SIZE_16BIT:
+		fb = (fb_address >> 1) + curpixel;
+		if (fb_format == FORMAT_RGBA)
+			hval = finalize_spanalpha(blend_en, curpixel_cvg, curpixel_memcvg) & 3;
+		oldhb[fb & 7] = hval;
+		break;
+	case PIXEL_SIZE_32BIT:
+		fb = (fb_address >> 2) + curpixel;
+		oldhb[(fb << 1) & 7] = gval;
+		oldhb[((fb << 1) + 1) & 7] = 0;
+		break;
+	}
+}
+
+void rejected_hbwrite_2cycle(int cdith, UINT32 blend_en, UINT32 prewrap, UINT32 curpixel, UINT32 curpixel_cvg, UINT32 curpixel_memcvg, int flip, int* delayedhbwidx)
+{
+	int g, dontblend, gval;
+	UINT32 fb;
+	INT32 hval = 0;
+	int fbsel = fb_size;
+
+	if (fb_size == PIXEL_SIZE_8BIT)
+	{
+		fb = fb_address + curpixel;
+		if (!(fb & 1))
+			fbsel--;
+	}
+
+	if (fbsel & 1)
+	{
+		if (!other_modes.color_on_cvg || prewrap)
+		{
+			dontblend = (other_modes.f.partialreject_2cycle && pixel_color.a >= 0xff);
+			if (!blend_en || dontblend)
+				g = *blender1a_g[1];
+			else
+			{
+				inv_pixel_color.a =  (~(*blender1b_a[1])) & 0xff;
+
+				blender_equation_cycle1_gval(&g);
+			}
+		}
+		else
+			g = *blender2a_g[1];
+
+		if (other_modes.rgb_dither_sel != 3)
+			rgb_dither_gval(&g, cdith);
+
+		gval = (g & 1) ? 3 : 0;
+	}
+
+	switch (fbsel)
+	{
+	case PIXEL_SIZE_4BIT:
+		break;
+	case PIXEL_SIZE_8BIT:
+		if (flip && *delayedhbwidx >= 0)
+		{
+			if ((UINT32)*delayedhbwidx < fb)
+			{
+				if ((UINT32)*delayedhbwidx <= plim)
+				{
+					int oldhbidx = *delayedhbwidx >> 1;
+					hidden_bits[oldhbidx] &= ~2;
+					hidden_bits[oldhbidx] |= oldhb[oldhbidx & 7] & 2;
+				}
+			}
+			else if (fb <= plim)
+			{
+				hidden_bits[fb >> 1] &= ~2;
+				hidden_bits[fb >> 1] |= gval & 2;
+			}
+
+			*delayedhbwidx = -1;
+		}
+
+		oldhb[(fb >> 1) & 7] = gval;
+		break;
+	case PIXEL_SIZE_16BIT:
+		fb = (fb_address >> 1) + curpixel;
+		if (fb_format == FORMAT_RGBA)
+			hval = finalize_spanalpha(blend_en, curpixel_cvg, curpixel_memcvg) & 3;
+		oldhb[fb & 7] = hval;
+		break;
+	case PIXEL_SIZE_32BIT:
+		fb = (fb_address >> 2) + curpixel;
+		oldhb[(fb << 1) & 7] = gval;
+		oldhb[((fb << 1) + 1) & 7] = 0;
+		break;
+	}
 }
 
 STRICTINLINE INT32 CLIP(INT32 value, INT32 min, INT32 max)
@@ -9621,6 +10078,26 @@ STRICTINLINE void rgb_dither(int* r, int* g, int* b, int dith)
 	replacesign = (bcomp - (*b & 7)) >> 31;
 	ditherdiff = newb - *b;
 	*b = *b + (ditherdiff & replacesign);
+}
+
+STRICTINLINE void rgb_dither_gval(int* g, int dith)
+{
+	INT32 newg = *g;
+	INT32 gcomp;
+
+	if (newg > 247)
+		newg = 255;
+	else
+		newg = (newg & 0xf8) + 8;
+
+	if (other_modes.rgb_dither_sel != 2)
+		gcomp = dith;
+	else
+		gcomp = (dith >> 3) & 7;
+
+	INT32 replacesign = (gcomp - (*g & 7)) >> 31;
+	INT32 ditherdiff = newg - *g;
+	*g = *g + (ditherdiff & replacesign);
 }
 
 STRICTINLINE void get_dither_noise(int x, int y, int* cdith, int* adith)
@@ -11014,6 +11491,17 @@ UINT32 compare_tri_command(UINT32 w0, UINT32 w1, UINT32 w2)
 		return 1;
 	else
 		return 0;
+}
+
+void complete_delayed_hbwrites(int delayedhbwidx)
+{
+	if ((UINT32)delayedhbwidx <= plim)
+	{
+		int oldhbidx = delayedhbwidx >> 1;
+
+		hidden_bits[oldhbidx] &= ~2;
+		hidden_bits[oldhbidx] |= oldhb[oldhbidx & 7] & 2;
+	}
 }
 
 void show_color(COLOR* col)
